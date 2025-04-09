@@ -49,14 +49,14 @@ export default {
 }
 
 .btn-primary {
-  background-color: #4361ee;
+  background-color: #e22323;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background-color: #3a56d4;
+  background-color: #000000;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.15);
+  box-shadow: 0 4px 12px rgba(238, 27, 27, 0.15);
 }
 
 .btn-primary:active:not(:disabled) {

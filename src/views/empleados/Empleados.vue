@@ -26,12 +26,6 @@
           @change-page="changePage"
       />
     </div>
-
-    <!-- Panel de depuración (opcional) -->
-    <div v-if="debug" class="debug-panel">
-      <h3>Información de depuración</h3>
-      <pre>{{ JSON.stringify(empleadosStore.pagination, null, 2) }}</pre>
-    </div>
   </div>
 </template>
 

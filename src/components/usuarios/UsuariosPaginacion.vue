@@ -41,7 +41,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 export default {
-  name: 'EmpleadosPaginacion',
+  name: 'UsuariosPaginacion',
   components: {
     ChevronLeft,
     ChevronRight
@@ -118,11 +118,6 @@ export default {
         currentPage + 2
       ];
     }
-  },
-  mounted() {
-    console.log('Paginación montada con datos:', this.pagination);
-    console.log('shouldShowPagination:', this.shouldShowPagination);
-    console.log('safeTotalPages:', this.safeTotalPages);
   },
   emits: ['change-page']
 }

@@ -8,7 +8,7 @@
             :value="search"
             @input="$emit('update:search', $event.target.value); $emit('search')"
             class="form-control search-input"
-            placeholder="Buscar por nombre, apellido o DNI..."
+            placeholder="Buscar por nombre, email o usuario..."
         />
       </div>
 
@@ -44,38 +44,23 @@
 
         <div class="filter-selects">
           <div class="filter-select-group">
-            <Building2 size="16" class="select-icon" />
+            <Shield size="16" class="select-icon" />
             <select
-                :value="filters.id_departamento"
-                @change="updateFilter('id_departamento', $event.target.value)"
+                :value="filters.id_rol"
+                @change="updateFilter('id_rol', $event.target.value)"
                 class="form-control select-filter"
             >
-              <option value="">Todos los departamentos</option>
-              <option
-                  v-for="departamento in departamentosUnicos"
-                  :key="departamento.id_departamento"
-                  :value="departamento.id_departamento"
-              >
-                {{ departamento.nombre }}
+              <option value="">Todos los roles</option>
+              <option v-for="rol in roles" :key="rol.id_rol" :value="rol.id_rol">
+                {{ rol.nombre }}
               </option>
-            </select>
-          </div>
-
-          <div class="filter-select-group">
-            <MapPin size="16" class="select-icon" />
-            <select
-                :value="filters.id_centro"
-                @change="updateFilter('id_centro', $event.target.value)"
-                class="form-control select-filter"
-            >
-              <option value="">Todos los centros</option>
-              <option
-                  v-for="centro in centros"
-                  :key="centro.id_centro"
-                  :value="centro.id_centro"
-              >
-                {{ centro.nombre }}
-              </option>
+              <!-- Fallback options si los roles no se han cargado -->
+              <template v-if="roles.length === 0">
+                <option value="1">Administrador</option>
+                <option value="2">Gerente</option>
+                <option value="3">RRHH</option>
+                <option value="4">Usuario</option>
+              </template>
             </select>
           </div>
 
@@ -89,29 +74,27 @@
 </template>
 
 <script>
-import { computed, onMounted } from 'vue';
-import { useDepartamentosStore } from '../../stores/departamentos';
-import { useCentrosStore } from '../../stores/centros';
 import {
   Search,
   RefreshCw,
   UserX,
   UserCheck,
   Users,
-  Building2,
-  MapPin
+  Shield
 } from 'lucide-vue-next';
+import { useRolesStore } from '../../stores/roles';
+import { storeToRefs } from 'pinia';
+import { onMounted } from 'vue';
 
 export default {
-  name: 'EmpleadosFiltros',
+  name: 'UsuariosFiltros',
   components: {
     Search,
     RefreshCw,
     UserX,
     UserCheck,
     Users,
-    Building2,
-    MapPin
+    Shield
   },
   props: {
     search: {
@@ -131,34 +114,17 @@ export default {
     'reset-filters'
   ],
   setup() {
-    const departamentosStore = useDepartamentosStore();
-    const centrosStore = useCentrosStore();
+    const rolesStore = useRolesStore();
+    const { roles } = storeToRefs(rolesStore);
 
-    onMounted(() => {
-      departamentosStore.fetchDepartamentos();
-      centrosStore.fetchCentros();
+    onMounted(async () => {
+      if (roles.value.length === 0) {
+        await rolesStore.fetchRoles();
+      }
     });
-
-    const departamentosUnicos = computed(() => {
-      const departamentos = departamentosStore.departamentos;
-      const nombresUnicos = new Set();
-      const resultado = [];
-
-      departamentos.forEach(departamento => {
-        if (!nombresUnicos.has(departamento.nombre)) {
-          nombresUnicos.add(departamento.nombre);
-          resultado.push(departamento);
-        }
-      });
-
-      return resultado;
-    });
-
-    const centros = computed(() => centrosStore.centros);
 
     return {
-      departamentosUnicos,
-      centros
+      roles
     };
   },
   methods: {
@@ -297,7 +263,6 @@ export default {
   cursor: pointer;
   transition: border-color 0.2s ease;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1rem;

@@ -33,10 +33,13 @@ export const useNotificationStore = defineStore("notification", {
             this.showNotification(`${title}: ${message}`, "info")
         },
 
+        warning(message, title = "Advertencia") {
+            this.showNotification(`${title}: ${message}`, "warning")
+        },
+
         clearNotification() {
             this.message = null
             this.type = null
         },
     },
 })
-

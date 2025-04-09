@@ -25,4 +25,3 @@ export default {
         return api.patch(`/empleados/${id}/status`, { activo })
     },
 }
-

@@ -7,7 +7,7 @@
             <rect x="3" y="3" width="18" height="18" rx="3" fill="#4361ee" />
             <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
-          <span class="logo-text">RRHH</span>
+          <span class="logo-text">SGRH</span>
         </div>
         <button class="sidebar-close" @click="closeSidebar">
           <X size="18" />

@@ -2,22 +2,32 @@
   <div v-if="notificationStore.message" class="notification" :class="notificationClass">
     <div class="notification-content">
       <span class="notification-icon">
-        <i v-if="notificationStore.type === 'success'" class="fas fa-check-circle"></i>
-        <i v-else-if="notificationStore.type === 'error'" class="fas fa-exclamation-circle"></i>
-        <i v-else-if="notificationStore.type === 'warning'" class="fas fa-exclamation-triangle"></i>
-        <i v-else class="fas fa-info-circle"></i>
+        <CheckCircle v-if="notificationStore.type === 'success'" size="20" />
+        <AlertCircle v-else-if="notificationStore.type === 'error'" size="20" />
+        <AlertTriangle v-else-if="notificationStore.type === 'warning'" size="20" />
+        <Info v-else size="20" />
       </span>
       <span class="notification-message">{{ notificationStore.message }}</span>
     </div>
-    <button class="notification-close" @click="notificationStore.clearNotification">×</button>
+    <button class="notification-close" @click="notificationStore.clearNotification">
+      <X size="16" />
+    </button>
   </div>
 </template>
 
 <script>
 import { useNotificationStore } from '../../stores/notification';
+import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-vue-next';
 
 export default {
   name: 'Notification',
+  components: {
+    CheckCircle,
+    AlertCircle,
+    AlertTriangle,
+    Info,
+    X
+  },
 
   setup() {
     const notificationStore = useNotificationStore();
@@ -40,7 +50,7 @@ export default {
 };
 </script>
 
-<style>
+<style scoped>
 .notification {
   position: fixed;
   top: 20px;
@@ -48,7 +58,7 @@ export default {
   min-width: 300px;
   max-width: 450px;
   padding: 15px;
-  border-radius: 4px;
+  border-radius: 0.375rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   display: flex;
   justify-content: space-between;
@@ -76,7 +86,8 @@ export default {
 
 .notification-icon {
   margin-right: 12px;
-  font-size: 20px;
+  display: flex;
+  align-items: center;
 }
 
 .notification-message {
@@ -87,29 +98,34 @@ export default {
 .notification-close {
   background: none;
   border: none;
-  font-size: 20px;
   cursor: pointer;
   margin-left: 10px;
   opacity: 0.7;
   transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border-radius: 0.25rem;
 }
 
 .notification-close:hover {
   opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .notification-success {
-  background-color: #f0fdf4;
-  border-left: 4px solid #22c55e;
+  background-color: #dcfce7;
+  border-left: 4px solid #10b981;
   color: #166534;
 }
 
 .notification-success .notification-icon {
-  color: #22c55e;
+  color: #10b981;
 }
 
 .notification-error {
-  background-color: #fef2f2;
+  background-color: #fee2e2;
   border-left: 4px solid #ef4444;
   color: #991b1b;
 }
@@ -120,12 +136,12 @@ export default {
 
 .notification-info {
   background-color: #eff6ff;
-  border-left: 4px solid #3b82f6;
+  border-left: 4px solid #4361ee;
   color: #1e40af;
 }
 
 .notification-info .notification-icon {
-  color: #3b82f6;
+  color: #4361ee;
 }
 
 .notification-warning {
@@ -138,4 +154,3 @@ export default {
   color: #f59e0b;
 }
 </style>
-

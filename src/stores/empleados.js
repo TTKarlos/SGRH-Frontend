@@ -6,19 +6,19 @@ export const useEmpleadosStore = defineStore("empleados", {
         empleados: [],
         loading: false,
         error: null,
-        pagination: {
-            page: 1,
-            limit: 10,
-            totalItems: 0,
-            totalPages: 1,
-        },
+        currentEmpleado: null,
         filters: {
             search: "",
             activo: null,
             id_departamento: "",
-            id_centro: "",
+            id_centro: ""
         },
-        currentEmpleado: null,
+        pagination: {
+            page: 1,
+            limit: 10,
+            totalItems: 0,
+            totalPages: 1
+        }
     }),
 
     actions: {
@@ -30,71 +30,35 @@ export const useEmpleadosStore = defineStore("empleados", {
                 const params = {
                     page: this.pagination.page,
                     limit: this.pagination.limit,
-                    ...this.filters,
+                    ...this.filters
                 }
-
-                Object.keys(params).forEach((key) => {
-                    if (params[key] === "" || params[key] === null) {
-                        delete params[key]
-                    }
-                })
 
                 const response = await empleadosApi.getAll(params)
                 const data = response.data
 
                 if (data.success) {
                     this.empleados = data.data.empleados || []
-                    const page = Number.parseInt(data.data.pagination.page) || 1
-                    const limit = Number.parseInt(data.data.pagination.limit) || 10
-                    const totalItems = Number.parseInt(data.data.pagination.total) || 0
-                    const totalPages = Number.parseInt(data.data.pagination.totalPages) || 1
 
-                    console.log("Datos de paginación recibidos:", {
-                        page,
-                        limit,
-                        totalItems,
-                        totalPages,
-                        rawData: data.data.pagination,
-                    })
-
+                    const apiPagination = data.data.pagination || {}
                     this.pagination = {
-                        page,
-                        limit,
-                        totalItems,
-                        totalPages,
+                        page: apiPagination.page || 1,
+                        limit: apiPagination.limit || 10,
+                        totalItems: apiPagination.total || 0,
+                        totalPages: apiPagination.totalPages || 1
                     }
+
+                    console.log('Paginación actualizada:', this.pagination)
+                    return this.empleados
                 } else {
                     throw new Error(data.message || "Error al cargar empleados")
                 }
             } catch (err) {
                 console.error("Error al cargar empleados:", err)
                 this.error = err.message || "Error al cargar empleados"
+                return []
             } finally {
                 this.loading = false
             }
-        },
-
-        setFilters(filters) {
-            this.filters = { ...filters }
-            this.pagination.page = 1
-            this.fetchEmpleados()
-        },
-
-        resetFilters() {
-            this.filters = {
-                search: "",
-                activo: null,
-                id_departamento: "",
-                id_centro: "",
-            }
-            this.pagination.page = 1
-            this.fetchEmpleados()
-        },
-
-        setPage(page) {
-            const validPage = Number.parseInt(page) || 1
-            this.pagination.page = validPage
-            this.fetchEmpleados()
         },
 
         async fetchEmpleadoById(id) {
@@ -108,12 +72,37 @@ export const useEmpleadosStore = defineStore("empleados", {
 
                 if (data.success) {
                     this.currentEmpleado = data.data.empleado
+                    return this.currentEmpleado
                 } else {
                     throw new Error(data.message || "Error al cargar el empleado")
                 }
             } catch (err) {
                 console.error("Error al cargar el empleado:", err)
                 this.error = err.message || "Error al cargar el empleado"
+                return null
+            } finally {
+                this.loading = false
+            }
+        },
+
+        async createEmpleado(empleadoData) {
+            this.loading = true
+            this.error = null
+
+            try {
+                const response = await empleadosApi.create(empleadoData)
+                const data = response.data
+
+                if (data.success) {
+                    await this.fetchEmpleados()
+                    return data.data.empleado
+                } else {
+                    throw new Error(data.message || "Error al crear el empleado")
+                }
+            } catch (err) {
+                console.error("Error al crear el empleado:", err)
+                this.error = err.message || "Error al crear el empleado"
+                throw err
             } finally {
                 this.loading = false
             }
@@ -129,6 +118,12 @@ export const useEmpleadosStore = defineStore("empleados", {
 
                 if (data.success) {
                     this.currentEmpleado = data.data.empleado
+
+                    const index = this.empleados.findIndex(e => e.id_empleado === Number(id))
+                    if (index !== -1) {
+                        this.empleados[index] = data.data.empleado
+                    }
+
                     return this.currentEmpleado
                 } else {
                     throw new Error(data.message || "Error al actualizar el empleado")
@@ -151,7 +146,14 @@ export const useEmpleadosStore = defineStore("empleados", {
                 const data = response.data
 
                 if (data.success) {
-                    this.currentEmpleado = null
+                    this.empleados = this.empleados.filter(
+                        e => e.id_empleado !== Number(id)
+                    )
+
+                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === Number(id)) {
+                        this.currentEmpleado = null
+                    }
+
                     return true
                 } else {
                     throw new Error(data.message || "Error al eliminar el empleado")
@@ -170,54 +172,53 @@ export const useEmpleadosStore = defineStore("empleados", {
             this.error = null
 
             try {
+                console.log(`Store: Cambiando estado a ${activo ? 'activo' : 'inactivo'}`)
                 const response = await empleadosApi.changeStatus(id, activo)
                 const data = response.data
 
                 if (data.success) {
-                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === id) {
+                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === Number(id)) {
                         this.currentEmpleado.activo = activo
                     }
 
-                    const index = this.empleados.findIndex((e) => e.id_empleado === id)
+                    const index = this.empleados.findIndex(e => e.id_empleado === Number(id))
                     if (index !== -1) {
                         this.empleados[index].activo = activo
                     }
 
                     return true
                 } else {
-                    throw new Error(data.message || "Error al cambiar el estado del empleado")
+                    throw new Error(data.message || `Error al ${activo ? 'activar' : 'desactivar'} el empleado`)
                 }
             } catch (err) {
-                console.error("Error al cambiar el estado del empleado:", err)
-                this.error = err.message || "Error al cambiar el estado del empleado"
+                console.error("Error al cambiar estado del empleado:", err)
+                this.error = err.message || `Error al ${activo ? 'activar' : 'desactivar'} el empleado`
                 return false
             } finally {
                 this.loading = false
             }
         },
 
-        async createEmpleado(empleadoData) {
-            this.loading = true
-            this.error = null
-
-            try {
-                const response = await empleadosApi.create(empleadoData)
-                const data = response.data
-
-                if (data.success) {
-                    this.fetchEmpleados()
-                    return data.data.empleado
-                } else {
-                    throw new Error(data.message || "Error al crear el empleado")
-                }
-            } catch (err) {
-                console.error("Error al crear el empleado:", err)
-                this.error = err.message || "Error al crear el empleado"
-                return null
-            } finally {
-                this.loading = false
-            }
+        setFilters(filters) {
+            this.filters = { ...filters }
+            this.pagination.page = 1
+            this.fetchEmpleados()
         },
-    },
-})
 
+        resetFilters() {
+            this.filters = {
+                search: "",
+                activo: null,
+                id_departamento: "",
+                id_centro: ""
+            }
+            this.pagination.page = 1
+            this.fetchEmpleados()
+        },
+
+        setPage(page) {
+            this.pagination.page = page
+            this.fetchEmpleados()
+        }
+    }
+})
