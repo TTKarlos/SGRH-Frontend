@@ -178,9 +178,12 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .card-header {
   padding: 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #f1f1f1;
+  font-family: 'Poppins', sans-serif;
 }
 
 .filters {
@@ -219,14 +222,15 @@ export default {
 }
 
 .filter-tab:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .filter-tab.active {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
-  border-color: #4361ee;
+  border-color: #dc2626;
 }
 
 .tab-icon {
@@ -275,27 +279,27 @@ export default {
 .search-input {
   padding: 0.625rem 0.75rem 0.625rem 2.5rem;
   border-radius: 0.375rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   width: 100%;
   font-size: 0.95rem;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
 }
 
 .select-filter {
   padding: 0.625rem 0.75rem 0.625rem 2.5rem;
   border-radius: 0.375rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   width: 100%;
   font-size: 0.95rem;
   background-color: white;
   cursor: pointer;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
@@ -306,18 +310,20 @@ export default {
 
 .select-filter:focus {
   outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
 }
 
 .btn-outline-secondary {
   background-color: transparent;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   color: #4b5563;
 }
 
 .btn-outline-secondary:hover {
-  background-color: #f3f4f6;
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .btn-reset {
@@ -327,6 +333,8 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
 }
 
 @media (max-width: 991px) {

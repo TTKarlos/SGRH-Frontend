@@ -35,6 +35,7 @@
 import DefaultLayout from '../../layouts/DefaultLayout.vue';
 import { useUsuariosStore } from '../../stores/usuarios';
 import { useNotificationStore } from '../../stores/notification';
+import { useRolesStore } from '../../stores/roles';
 import UsuariosHeader from '../../components/usuarios/UsuariosHeader.vue';
 import UsuariosFiltros from '../../components/usuarios/UsuariosFiltros.vue';
 import UsuariosTabla from '../../components/usuarios/UsuariosTabla.vue';
@@ -63,13 +64,16 @@ export default {
   setup() {
     const usuariosStore = useUsuariosStore();
     const notificationStore = useNotificationStore();
+    const rolesStore = useRolesStore();
 
     return {
       usuariosStore,
-      notificationStore
+      notificationStore,
+      rolesStore
     };
   },
   created() {
+    this.rolesStore.fetchRoles();
     this.loadUsuarios();
   },
   methods: {
@@ -81,13 +85,16 @@ export default {
       clearTimeout(this.searchTimeout);
       this.searchTimeout = setTimeout(() => {
         this.filters.search = this.searchQuery;
-        this.applyFilters();
+        this.usuariosStore.setFilters({...this.filters});
+        this.usuariosStore.setPage(1);
+        this.loadUsuarios();
       }, 300);
     },
 
     applyFilters() {
       this.usuariosStore.setFilters({...this.filters});
       this.usuariosStore.setPage(1);
+      this.loadUsuarios();
 
       let mensaje = 'Filtros aplicados';
       if (this.filters.search) {
@@ -99,8 +106,7 @@ export default {
         mensaje += ' (Solo inactivos)';
       }
       if (this.filters.id_rol) {
-        const rolStore = this.usuariosStore.getRolNombre ? this.usuariosStore.getRolNombre(this.filters.id_rol) : null;
-        const rolName = rolStore || `Rol ${this.filters.id_rol}`;
+        const rolName = this.getRolNombre(this.filters.id_rol);
         mensaje += ` (${rolName})`;
       }
       this.notificationStore.info(mensaje, 'Filtros');
@@ -115,6 +121,7 @@ export default {
       };
 
       this.usuariosStore.resetFilters();
+      this.loadUsuarios();
       this.notificationStore.info('Se han eliminado todos los filtros', 'Filtros');
     },
 
@@ -129,14 +136,22 @@ export default {
 
     crearNuevoUsuario() {
       this.$router.push('/usuarios/nuevo');
+    },
+
+    getRolNombre(id_rol) {
+      const rolStore = this.rolesStore.getRolNombre(id_rol);
+      return rolStore || `Rol ${id_rol}`;
     }
   }
 }
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .usuarios-page {
   padding: 1.5rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .card {

@@ -124,10 +124,7 @@ export default {
     },
 
     changePage(page) {
-      console.log("Cambiando a página:", page);
-
       this.empleadosStore.pagination.page = parseInt(page);
-
       this.empleadosStore.fetchEmpleados();
     },
 
@@ -142,15 +139,12 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .empleados-page {
   padding: 1.5rem;
-}
-
-@media (max-width: 767px) {
-  .empleados-page {
-    padding: 1rem;
-  }
+  font-family: 'Poppins', sans-serif;
 }
 
 .card {
@@ -158,6 +152,12 @@ export default {
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #f1f1f1;
+}
+
+@media (max-width: 767px) {
+  .empleados-page {
+    padding: 1rem;
+  }
 }
 </style>

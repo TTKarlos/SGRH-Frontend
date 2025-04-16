@@ -63,6 +63,8 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .state-container {
   display: flex;
   flex-direction: column;
@@ -75,6 +77,7 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-bottom: 1.75rem;
   border: 1px solid #e5e7eb;
+  font-family: 'Poppins', sans-serif;
 }
 
 .state-container h3 {
@@ -100,7 +103,7 @@ export default {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background-color: #e11d48;
+  background-color: #dc2626;
   animation: bounce 1.4s infinite ease-in-out both;
 }
 
@@ -122,12 +125,12 @@ export default {
 }
 
 .error-icon {
-  color: #ef4444;
+  color: #dc2626;
   margin-bottom: 1rem;
-  background-color: rgba(239, 68, 68, 0.1);
+  background-color: rgba(220, 38, 38, 0.1);
   padding: 1.5rem;
   border-radius: 50%;
-  border: 2px solid rgba(239, 68, 68, 0.2);
+  border: 2px solid rgba(220, 38, 38, 0.2);
 }
 
 .empty-icon {
@@ -153,13 +156,13 @@ export default {
   cursor: pointer;
   transition: all 0.3s ease;
   border: none;
-  background-color: #e11d48;
+  background-color: #dc2626;
   color: white;
   margin-top: 1.5rem;
 }
 
 .retry-btn:hover {
-  background-color: #be123c;
+  background-color: #b91c1c;
   transform: translateY(-2px);
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }

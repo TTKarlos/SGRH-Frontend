@@ -382,12 +382,13 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .roles-gestion {
   padding: 24px;
   background-color: #ffffff;
   min-height: 100%;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  font-family: 'Poppins', sans-serif;
 }
 
 .roles-header {
@@ -402,6 +403,19 @@ export default {
   font-weight: 700;
   color: #111827;
   margin: 0;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.roles-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
 }
 
 .btn-create {
@@ -417,12 +431,13 @@ export default {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-family: 'Poppins', sans-serif;
 }
 
 .btn-create:hover {
   background-color: #b91c1c;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-create:active {

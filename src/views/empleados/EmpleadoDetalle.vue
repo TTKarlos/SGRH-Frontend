@@ -48,6 +48,10 @@
       </div>
 
       <div v-else-if="empleadosStore.error" class="error-container">
+        />
+      </div>
+
+      <div v-else-if="empleadosStore.error" class="error-container">
         <div class="error-message">
           <AlertTriangle size="24" />
           <p>{{ empleadosStore.error }}</p>
@@ -681,10 +685,14 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .empleado-detalle {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  padding: 1.5rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .page-header {
@@ -704,6 +712,20 @@ export default {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.header-left h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
 }
 
 .header-actions {
@@ -719,7 +741,7 @@ export default {
   border-radius: 0.375rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   border: none;
 }
 
@@ -729,47 +751,54 @@ export default {
 
 .btn-ghost {
   background-color: transparent;
-  color: var(--color-text);
+  color: #4b5563;
 }
 
 .btn-ghost:hover {
-  background-color: var(--color-bg-hover);
+  background-color: #f3f4f6;
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
+  background-color: #dc2626;
   color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-primary:hover {
-  background-color: var(--color-primary-dark);
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-success {
-  background-color: var(--color-success);
+  background-color: #dc2626;
   color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-success:hover {
-  background-color: var(--color-success-dark);
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-secondary {
-  background-color: var(--color-secondary);
-  color: white;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
 }
 
 .btn-secondary:hover {
-  background-color: var(--color-secondary-dark);
+  background-color: #e5e7eb;
 }
 
 .btn-danger {
-  background-color: var(--color-danger);
-  color: white;
+  background-color: #fee2e2;
+  color: #dc2626;
 }
 
 .btn-danger:hover {
-  background-color: var(--color-danger-dark);
+  background-color: #fecaca;
 }
 
 .btn-status {
@@ -779,24 +808,25 @@ export default {
   border-radius: 9999px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   border: none;
 }
 
 .btn-status-active {
-  background-color: var(--color-success-bg);
-  color: var(--color-success);
+  background-color: #dcfce7;
+  color: #166534;
 }
 
 .btn-status-inactive {
-  background-color: var(--color-danger-bg);
-  color: var(--color-danger);
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid #e5e7eb;
   margin-bottom: 1.5rem;
+  overflow-x: auto;
 }
 
 .tab-button {
@@ -806,19 +836,20 @@ export default {
   border: none;
   background: none;
   font-weight: 500;
-  color: var(--color-text-muted);
+  color: #6b7280;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
 }
 
 .tab-button:hover {
-  color: var(--color-text);
+  color: #4b5563;
 }
 
 .tab-button.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: #dc2626;
+  border-bottom-color: #dc2626;
 }
 
 .tab-icon {
@@ -833,27 +864,31 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  animation: fadeIn 0.3s ease;
 }
 
 .card {
-  background-color: var(--color-bg-card);
+  background-color: white;
   border-radius: 0.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  padding: 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: #f9fafb;
 }
 
 .card-header h2 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
+  color: #374151;
 }
 
 .card-body {
@@ -874,36 +909,38 @@ export default {
 
 .form-group label {
   font-weight: 500;
-  color: var(--color-text-muted);
+  color: #4b5563;
+  font-size: 0.875rem;
 }
 
 .form-control {
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
-  background-color: var(--color-bg-input);
-  color: var(--color-text);
-  transition: all 0.2s;
+  background-color: white;
+  color: #111827;
+  transition: all 0.2s ease;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
 }
 
 .form-control.is-invalid {
-  border-color: var(--color-danger);
+  border-color: #dc2626;
 }
 
 .invalid-feedback {
-  color: var(--color-danger);
+  color: #dc2626;
   font-size: 0.875rem;
 }
 
 .form-value {
   padding: 0.5rem 0;
-  color: var(--color-text);
+  color: #111827;
+  font-weight: 500;
 }
 
 .loading-container,
@@ -914,8 +951,9 @@ export default {
   justify-content: center;
   padding: 2rem;
   text-align: center;
-  background-color: var(--color-bg-card);
+  background-color: white;
   border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   min-height: 200px;
 }
 
@@ -927,7 +965,7 @@ export default {
 }
 
 .error-message svg {
-  color: var(--color-danger);
+  color: #dc2626;
   margin-bottom: 1rem;
 }
 
@@ -941,7 +979,8 @@ export default {
 }
 
 .empty-icon {
-  color: var(--color-text-muted);
+  color: #dc2626;
+  opacity: 0.5;
   margin-bottom: 1rem;
 }
 
@@ -949,10 +988,11 @@ export default {
   font-size: 1.25rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+  color: #374151;
 }
 
 .empty-state p {
-  color: var(--color-text-muted);
+  color: #6b7280;
   margin-bottom: 1.5rem;
 }
 
@@ -967,14 +1007,16 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 50;
+  backdrop-filter: blur(2px);
 }
 
 .modal-container {
-  background-color: var(--color-bg-card);
+  background-color: white;
   border-radius: 0.5rem;
   width: 100%;
   max-width: 28rem;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  animation: fadeIn 0.3s ease;
 }
 
 .modal-header {
@@ -982,20 +1024,29 @@ export default {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .modal-header h3 {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  color: #111827;
 }
 
 .btn-close {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--color-text-muted);
+  color: #6b7280;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: all 0.2s ease;
+}
+
+.btn-close:hover {
+  background-color: #f3f4f6;
+  color: #dc2626;
 }
 
 .modal-body {
@@ -1007,7 +1058,7 @@ export default {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid #e5e7eb;
 }
 
 .animate-spin {
@@ -1023,7 +1074,22 @@ export default {
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 768px) {
+  .empleado-detalle {
+    padding: 1rem;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }
@@ -1037,10 +1103,12 @@ export default {
   .header-actions {
     width: 100%;
     justify-content: flex-end;
+    flex-wrap: wrap;
   }
 
   .tabs {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
   }
 
   .tab-button {

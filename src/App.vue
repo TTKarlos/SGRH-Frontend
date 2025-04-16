@@ -7,8 +7,21 @@
 
     <router-view v-else />
 
-
     <Notification />
+
+    <!-- Botón para mostrar/ocultar el depurador de permisos -->
+    <button
+        v-if="isDevelopment"
+        @click="toggleDebugger"
+        class="debug-toggle-button"
+        :class="{ 'active': showDebugger }"
+    >
+      <span v-if="showDebugger">Ocultar Depurador</span>
+      <span v-else>Mostrar Depurador</span>
+    </button>
+
+    <!-- Depurador de permisos -->
+    <PermissionDebugger v-if="isDevelopment && showDebugger" />
   </div>
 </template>
 
@@ -32,6 +45,7 @@ export default {
     const router = useRouter();
     const isDevelopment = computed(() => process.env.NODE_ENV === 'development');
     const forceLoaded = ref(false);
+    const showDebugger = ref(false);
 
     const isLoading = computed(() => {
       return authStore.initializing ||
@@ -44,6 +58,11 @@ export default {
       return 'Verificando autenticación...';
     });
 
+    const toggleDebugger = () => {
+      showDebugger.value = !showDebugger.value;
+      localStorage.setItem('showPermissionDebugger', showDebugger.value);
+    };
+
     watch(() => authStore.isAuthenticated, (isAuthenticated) => {
       if (isAuthenticated && !authStore.permissionsLoaded && !authStore.isLoadingPermissions) {
         authStore.loadUserRoleAndPermissions().catch(error => {
@@ -53,6 +72,11 @@ export default {
     });
 
     onMounted(async () => {
+      const savedDebuggerState = localStorage.getItem('showPermissionDebugger');
+      if (savedDebuggerState !== null) {
+        showDebugger.value = savedDebuggerState === 'true';
+      }
+
       const safetyTimeout = setTimeout(() => {
         forceLoaded.value = true;
         authStore.initializing = false;
@@ -75,8 +99,49 @@ export default {
     return {
       isLoading,
       loadingMessage,
-      forceLoaded
+      forceLoaded,
+      isDevelopment,
+      showDebugger,
+      toggleDebugger
     };
   }
 }
 </script>
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Estilos para el botón de depurador */
+.debug-toggle-button {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  background-color: #1e293b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 9999;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.debug-toggle-button:hover {
+  background-color: #334155;
+}
+
+.debug-toggle-button.active {
+  background-color: #E11D48;
+}
+
+.debug-toggle-button.active:hover {
+  background-color: #BE123C;
+}
+</style>

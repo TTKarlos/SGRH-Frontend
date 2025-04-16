@@ -28,6 +28,8 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -35,6 +37,7 @@ export default {
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .header-title {
@@ -46,12 +49,25 @@ export default {
   font-size: 1.75rem;
   font-weight: 600;
   margin: 0;
-  color: #333;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.header-title h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
 }
 
 .text-muted {
-  color: #6c757d;
-  margin-top: 0.25rem;
+  color: #6b7280;
+  margin-top: 0.5rem;
   font-size: 0.95rem;
 }
 
@@ -69,12 +85,15 @@ export default {
 }
 
 .btn-primary {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-primary:hover {
-  background-color: #3a56d4;
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-icon {
@@ -92,4 +111,3 @@ export default {
   }
 }
 </style>
-

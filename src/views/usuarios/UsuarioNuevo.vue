@@ -306,8 +306,11 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .usuario-nuevo-page {
   padding: 1.5rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .page-header {
@@ -329,7 +332,20 @@ export default {
   margin: 0;
   font-size: 1.75rem;
   font-weight: 600;
-  color: #333;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.header-left h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
 }
 
 .btn-back {
@@ -346,7 +362,8 @@ export default {
 }
 
 .btn-back:hover {
-  background-color: #f3f4f6;
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 .card {
@@ -360,6 +377,7 @@ export default {
 .card-header {
   padding: 1.25rem;
   border-bottom: 1px solid #e5e7eb;
+  background-color: #fafafa;
 }
 
 .card-header h2 {
@@ -427,17 +445,17 @@ export default {
 
 .form-control:focus {
   outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .form-control.is-invalid {
-  border-color: #ef4444;
+  border-color: #dc2626;
 }
 
 .invalid-feedback {
   font-size: 0.875rem;
-  color: #ef4444;
+  color: #dc2626;
 }
 
 .form-text {
@@ -489,7 +507,7 @@ export default {
 }
 
 input:checked + .toggle-slider {
-  background-color: #4361ee;
+  background-color: #dc2626;
 }
 
 input:checked + .toggle-slider:before {
@@ -521,13 +539,16 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-primary {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
   border: none;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-primary:hover {
-  background-color: #3a56d4;
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-outline-secondary {
@@ -537,7 +558,9 @@ input:checked + .toggle-slider:before {
 }
 
 .btn-outline-secondary:hover {
-  background-color: #f3f4f6;
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .btn-icon {

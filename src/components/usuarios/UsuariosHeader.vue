@@ -38,18 +38,34 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .page-header h1 {
   margin: 0;
   font-size: 1.75rem;
   font-weight: 600;
-  color: #333;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.page-header h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
 }
 
 .btn {
@@ -66,12 +82,15 @@ export default {
 }
 
 .btn-primary {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-primary:hover {
-  background-color: #3a56d4;
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-icon {

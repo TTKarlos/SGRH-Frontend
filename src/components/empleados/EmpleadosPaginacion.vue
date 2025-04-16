@@ -125,9 +125,12 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .card-footer {
   padding: 1.25rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid #f1f1f1;
+  font-family: 'Poppins', sans-serif;
 }
 
 .pagination {
@@ -149,7 +152,7 @@ export default {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   background-color: #fff;
   color: #4b5563;
@@ -160,8 +163,9 @@ export default {
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background-color: #f3f4f6;
-  border-color: #9ca3af;
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .pagination-btn:disabled {
@@ -180,7 +184,7 @@ export default {
   justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   background-color: #fff;
   color: #4b5563;
@@ -191,13 +195,15 @@ export default {
 }
 
 .page-btn:hover:not(.active) {
-  background-color: #f3f4f6;
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .page-btn.active {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
-  border-color: #4361ee;
+  border-color: #dc2626;
 }
 
 @media (max-width: 767px) {

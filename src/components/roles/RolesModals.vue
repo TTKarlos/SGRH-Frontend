@@ -417,6 +417,8 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -441,6 +443,7 @@ export default {
   display: flex;
   flex-direction: column;
   max-height: 90vh;
+  font-family: 'Poppins', sans-serif;
 }
 
 .modal-xl {
@@ -557,6 +560,7 @@ export default {
   border-radius: 6px;
   font-size: 14px;
   transition: all 0.2s;
+  font-family: 'Poppins', sans-serif;
 }
 
 .form-control:focus {
@@ -566,7 +570,7 @@ export default {
 }
 
 .form-control.is-invalid {
-  border-color: #ef4444;
+  border-color: #dc2626;
 }
 
 .invalid-feedback {
@@ -574,7 +578,7 @@ export default {
   width: 100%;
   margin-top: 6px;
   font-size: 14px;
-  color: #ef4444;
+  color: #dc2626;
 }
 
 .loading-container {
@@ -757,6 +761,7 @@ export default {
   border-radius: 6px;
   font-size: 13px;
   width: 200px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .search-input:focus {
@@ -782,6 +787,7 @@ export default {
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
+  font-family: 'Poppins', sans-serif;
 }
 
 .btn-module-select:hover {
@@ -927,6 +933,7 @@ export default {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  font-family: 'Poppins', sans-serif;
 }
 
 .btn-save {
@@ -950,13 +957,13 @@ export default {
 }
 
 .btn-delete {
-  background-color: #ef4444;
+  background-color: #dc2626;
   color: white;
   border: none;
 }
 
 .btn-delete:hover:not(:disabled) {
-  background-color: #dc2626;
+  background-color: #b91c1c;
 }
 
 .btn-save:disabled, .btn-delete:disabled {
@@ -981,7 +988,7 @@ export default {
 }
 
 .delete-icon {
-  color: #ef4444;
+  color: #dc2626;
   margin-bottom: 16px;
   background-color: #fee2e2;
   padding: 16px;
@@ -989,7 +996,7 @@ export default {
 }
 
 .text-danger {
-  color: #ef4444;
+  color: #dc2626;
   font-weight: 500;
   margin-top: 8px;
 }

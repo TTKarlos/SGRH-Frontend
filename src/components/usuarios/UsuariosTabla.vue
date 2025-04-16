@@ -182,8 +182,11 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .card-body {
   padding: 0;
+  font-family: 'Poppins', sans-serif;
 }
 
 .loading-container,
@@ -199,7 +202,7 @@ export default {
 
 .error-icon,
 .empty-icon {
-  color: #ef4444;
+  color: #dc2626;
   margin-bottom: 1rem;
 }
 
@@ -239,13 +242,13 @@ export default {
 }
 
 .btn-primary {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
   border: none;
 }
 
 .btn-primary:hover {
-  background-color: #3a56d4;
+  background-color: #b91c1c;
 }
 
 .btn-outline-secondary {
@@ -290,7 +293,7 @@ export default {
 }
 
 .usuario-row:hover {
-  background-color: #f3f4f6;
+  background-color: #fef2f2;
 }
 
 .user-cell {
@@ -306,10 +309,11 @@ export default {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  background-color: #4361ee;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
   color: white;
   font-weight: 600;
   font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
 }
 
 .user-username {
@@ -336,8 +340,8 @@ export default {
 }
 
 .badge-primary {
-  background-color: #eff6ff;
-  color: #2563eb;
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 .badge-warning {

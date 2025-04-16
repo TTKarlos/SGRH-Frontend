@@ -187,7 +187,7 @@ export default {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #4f46e5;
+  background-color: #dc2626;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -239,7 +239,7 @@ export default {
 
 .router-link-active {
   background-color: #334155;
-  border-left: 3px solid #4f46e5;
+  border-left: 3px solid #dc2626;
 }
 
 .nav-icon {
@@ -285,9 +285,9 @@ export default {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid rgba(79, 70, 229, 0.2);
+  border: 4px solid rgba(220, 38, 38, 0.2);
   border-radius: 50%;
-  border-top-color: #4f46e5;
+  border-top-color: #dc2626;
   animation: spin 1s ease-in-out infinite;
   margin-bottom: 1rem;
 }

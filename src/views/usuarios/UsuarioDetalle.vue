@@ -166,28 +166,31 @@
                         v-model="usuario.id_rol"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.id_rol }"
-                        :disabled="isLastAdmin"
+                        :disabled="isLastAdmin || isCurrentUser"
                     >
                       <option v-for="rol in roles" :key="rol.id_rol" :value="rol.id_rol">
                         {{ rol.nombre }}
                       </option>
                     </select>
+                    <div v-if="editMode && isCurrentUser" class="info-feedback">
+                      No puedes cambiar tu propio rol por razones de seguridad.
+                    </div>
                     <div v-if="editMode && validationErrors.id_rol" class="invalid-feedback">
                       {{ validationErrors.id_rol }}
                     </div>
                     <div v-else class="form-value">
-                      <span class="badge" :class="getRolBadgeClass(usuario.id_rol)">
-                        {{ getRolLabel(usuario.id_rol) }}
-                      </span>
+                    <span class="badge" :class="getRolBadgeClass(usuario.id_rol)">
+                      {{ getRolLabel(usuario.id_rol) }}
+                    </span>
                     </div>
                   </div>
 
                   <div class="form-group">
                     <label>Estado</label>
                     <div class="form-value">
-                      <span class="badge" :class="usuario.activo ? 'badge-success' : 'badge-danger'">
-                        {{ usuario.activo ? 'Activo' : 'Inactivo' }}
-                      </span>
+                    <span class="badge" :class="usuario.activo ? 'badge-success' : 'badge-danger'">
+                      {{ usuario.activo ? 'Activo' : 'Inactivo' }}
+                    </span>
                     </div>
                   </div>
 
@@ -263,12 +266,16 @@
               <AlertTriangle size="18" />
               <span>No se puede eliminar el último administrador del sistema.</span>
             </div>
+            <div v-if="isCurrentUser" class="alert alert-warning">
+              <AlertTriangle size="18" />
+              <span>No puedes eliminar tu propia cuenta de usuario.</span>
+            </div>
           </div>
           <div class="modal-footer">
             <button @click="showDeleteModal = false" class="btn btn-secondary">
               Cancelar
             </button>
-            <button @click="deleteUsuario" class="btn btn-danger" :disabled="loading || isLastAdmin">
+            <button @click="deleteUsuario" class="btn btn-danger" :disabled="loading || isLastAdmin || isCurrentUser">
               <Trash2 v-if="!loading" size="18" class="btn-icon" />
               <Loader v-else size="18" class="btn-icon animate-spin" />
               Eliminar
@@ -357,6 +364,11 @@ export default {
       return usuario.value.id_rol === 1 && usuario.value.activo && usuario.value.es_ultimo_admin === true
     })
 
+    const isCurrentUser = computed(() => {
+      if (!usuario.value || !authStore.user) return false
+      return usuario.value.id_usuario === authStore.user.id_usuario
+    })
+
     const loadUsuario = async () => {
       loading.value = true
       error.value = null
@@ -397,6 +409,7 @@ export default {
       passwordLoading,
       canEdit,
       isLastAdmin,
+      isCurrentUser,
       usuariosStore,
       rolesStore,
       authStore,
@@ -456,6 +469,11 @@ export default {
 
     async saveUsuario() {
       try {
+        if (this.isCurrentUser && this.usuario.id_rol !== this.originalUsuario.id_rol) {
+          this.usuario.id_rol = this.originalUsuario.id_rol
+          this.notificationStore.warning("No puedes cambiar tu propio rol por razones de seguridad", "Acción no permitida")
+        }
+
         const { isValid, errors } = await validateUpdateUser(this.usuario)
         if (!isValid) {
           this.validationErrors = errors
@@ -485,6 +503,11 @@ export default {
     },
 
     async toggleUsuarioStatus() {
+      if (this.isCurrentUser) {
+        this.notificationStore.warning("No puedes cambiar el estado de tu propia cuenta", "Acción no permitida")
+        return
+      }
+
       try {
         const newStatus = !this.usuario.activo
         this.loading = true
@@ -516,49 +539,63 @@ export default {
     },
 
     async changePassword() {
-      this.passwordErrors = {}
+      this.passwordErrors = {};
 
       if (this.passwordData.newPassword !== this.passwordData.confirmPassword) {
-        this.passwordErrors.confirmPassword = "Las contraseñas no coinciden"
-        this.notificationStore.error("Las contraseñas no coinciden", "Error")
-        return
+        this.passwordErrors.confirmPassword = "Las contraseñas no coinciden";
+        this.notificationStore.error("Las contraseñas no coinciden", "Error");
+        return;
       }
 
       if (this.passwordData.newPassword.length < 8) {
-        this.passwordErrors.newPassword = "La contraseña debe tener al menos 8 caracteres"
-        this.notificationStore.error("La contraseña debe tener al menos 8 caracteres", "Error")
-        return
+        this.passwordErrors.newPassword = "La contraseña debe tener al menos 8 caracteres";
+        this.notificationStore.error("La contraseña debe tener al menos 8 caracteres", "Error");
+        return;
       }
 
       try {
-        this.passwordLoading = true
-        const success = await this.usuariosStore.resetPassword(this.usuario.id_usuario, this.passwordData.newPassword)
+        this.passwordLoading = true;
+        const success = await this.usuariosStore.resetPassword(this.usuario.id_usuario, this.passwordData.newPassword);
 
         if (success) {
-          this.notificationStore.success(`Contraseña cambiada exitosamente`, "Contraseña actualizada")
-          this.passwordData.newPassword = ""
-          this.passwordData.confirmPassword = ""
+          this.notificationStore.success(`Contraseña cambiada exitosamente`, "Contraseña actualizada");
+          this.passwordData.newPassword = "";
+          this.passwordData.confirmPassword = "";
         } else {
-          this.notificationStore.error("No se pudo cambiar la contraseña", "Error")
+          this.notificationStore.error("No se pudo cambiar la contraseña", "Error");
         }
       } catch (error) {
-        const statusCode = error.response?.status
+        const statusCode = error.response?.status;
+        const errorMessage = error.response?.data?.message || '';
 
         if (statusCode === 400) {
-          this.passwordErrors.newPassword = "La nueva contraseña no puede ser igual a la actual"
-          this.notificationStore.error("La nueva contraseña no puede ser igual a la actual", "Error")
+          if (errorMessage.includes('misma contraseña') || errorMessage.includes('same password')) {
+            this.passwordErrors.newPassword = "La nueva contraseña no puede ser igual a la actual";
+            this.notificationStore.warning(
+                "Por seguridad, debes elegir una contraseña diferente a la actual",
+                "Contraseña sin cambios"
+            );
+          } else {
+            this.passwordErrors.newPassword = "La nueva contraseña no cumple con los requisitos de seguridad";
+          }
         } else {
           this.notificationStore.error(
               "Error del servidor. Por favor, inténtelo de nuevo más tarde",
               "Error del servidor",
-          )
+          );
         }
       } finally {
-        this.passwordLoading = false
+        this.passwordLoading = false;
       }
     },
 
     async deleteUsuario() {
+      if (this.isCurrentUser) {
+        this.notificationStore.warning("No puedes eliminar tu propia cuenta de usuario", "Acción no permitida")
+        this.showDeleteModal = false
+        return
+      }
+
       try {
         this.loading = true
         const success = await this.usuariosStore.deleteUsuario(this.usuario.id_usuario)
@@ -588,11 +625,14 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .usuario-detalle-page {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   padding: 1.5rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .page-header {
@@ -608,6 +648,26 @@ export default {
   gap: 1rem;
 }
 
+.header-left h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.header-left h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
+}
+
 .header-actions {
   display: flex;
   gap: 0.5rem;
@@ -615,8 +675,9 @@ export default {
 
 .tabs {
   display: flex;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e5e7eb;
   margin-bottom: 1.5rem;
+  overflow-x: auto;
 }
 
 .tab-button {
@@ -627,19 +688,20 @@ export default {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--text-color-secondary);
+  color: #6b7280;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .tab-button:hover {
-  color: var(--primary-color);
+  color: #dc2626;
 }
 
 .tab-button.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
+  color: #dc2626;
+  border-bottom-color: #dc2626;
 }
 
 .tab-icon {
@@ -667,20 +729,23 @@ export default {
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
 .card-header {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background-color: #f9fafb;
 }
 
 .card-header h2 {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 0;
+  color: #111827;
 }
 
 .card-body {
@@ -701,35 +766,44 @@ export default {
 
 .form-group label {
   font-weight: 500;
-  color: var(--text-color-secondary);
+  color: #4b5563;
+  font-size: 0.875rem;
 }
 
 .form-control {
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-color);
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   font-size: 1rem;
   transition: border-color 0.2s;
 }
 
 .form-control:focus {
-  border-color: var(--primary-color);
+  border-color: #dc2626;
   outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .form-control.is-invalid {
-  border-color: var(--danger-color);
+  border-color: #dc2626;
 }
 
 .invalid-feedback {
-  color: var(--danger-color);
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.info-feedback {
+  color: #0284c7;
   font-size: 0.875rem;
   margin-top: 0.25rem;
 }
 
 .form-value {
   padding: 0.5rem 0;
-  color: var(--text-color);
+  color: #111827;
+  font-weight: 500;
 }
 
 .form-actions {
@@ -749,33 +823,33 @@ export default {
 }
 
 .badge-primary {
-  background-color: var(--primary-color-light);
-  color: var(--primary-color);
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 .badge-success {
-  background-color: var(--success-color-light);
-  color: var(--success-color);
+  background-color: #ecfdf5;
+  color: #059669;
 }
 
 .badge-danger {
-  background-color: var(--danger-color-light);
-  color: var(--danger-color);
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 .badge-warning {
-  background-color: var(--warning-color-light);
-  color: var(--warning-color);
+  background-color: #fffbeb;
+  color: #d97706;
 }
 
 .badge-info {
-  background-color: var(--info-color-light);
-  color: var(--info-color);
+  background-color: #f0f9ff;
+  color: #0284c7;
 }
 
 .badge-secondary {
-  background-color: var(--secondary-color-light);
-  color: var(--secondary-color);
+  background-color: #f3f4f6;
+  color: #4b5563;
 }
 
 .btn {
@@ -798,48 +872,56 @@ export default {
 }
 
 .btn-primary {
-  background-color: var(--primary-color);
+  background-color: #dc2626;
   color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-color-dark);
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-secondary {
-  background-color: var(--secondary-color-light);
-  color: var(--secondary-color);
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
 }
 
 .btn-secondary:hover {
-  background-color: var(--secondary-color-lighter);
+  background-color: #e5e7eb;
 }
 
 .btn-success {
-  background-color: var(--success-color);
+  background-color: #dc2626;
   color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-success:hover {
-  background-color: var(--success-color-dark);
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-danger {
-  background-color: var(--danger-color);
-  color: white;
+  background-color: #fee2e2;
+  color: #dc2626;
 }
 
 .btn-danger:hover {
-  background-color: var(--danger-color-dark);
+  background-color: #fecaca;
 }
 
 .btn-ghost {
   background-color: transparent;
-  color: var(--text-color);
+  color: #4b5563;
 }
 
 .btn-ghost:hover {
-  background-color: var(--background-color-light);
+  background-color: #f3f4f6;
+  color: #dc2626;
 }
 
 .btn-status {
@@ -853,13 +935,13 @@ export default {
 }
 
 .btn-status-active {
-  background-color: var(--success-color-light);
-  color: var(--success-color);
+  background-color: #ecfdf5;
+  color: #059669;
 }
 
 .btn-status-inactive {
-  background-color: var(--danger-color-light);
-  color: var(--danger-color);
+  background-color: #fef2f2;
+  color: #dc2626;
 }
 
 .btn:disabled {
@@ -886,7 +968,7 @@ export default {
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
-  color: var(--danger-color);
+  color: #dc2626;
 }
 
 .modal-overlay {
@@ -900,6 +982,7 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(2px);
 }
 
 .modal-container {
@@ -912,7 +995,7 @@ export default {
 
 .modal-header {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -928,7 +1011,7 @@ export default {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-color-secondary);
+  color: #6b7280;
 }
 
 .modal-body {
@@ -937,14 +1020,14 @@ export default {
 
 .modal-footer {
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid #e5e7eb;
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
 }
 
 .text-danger {
-  color: var(--danger-color);
+  color: #dc2626;
 }
 
 .alert {
@@ -957,8 +1040,8 @@ export default {
 }
 
 .alert-warning {
-  background-color: var(--warning-color-light);
-  color: var(--warning-color);
+  background-color: #fffbeb;
+  color: #d97706;
 }
 
 .animate-spin {
@@ -971,6 +1054,37 @@ export default {
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 767px) {
+  .usuario-detalle-page {
+    padding: 1rem;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .tab-button {
+    padding: 0.5rem 1rem;
   }
 }
 </style>

@@ -98,6 +98,8 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -112,12 +114,12 @@ export default {
 }
 
 .btn-primary {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #3a56d4;
+  background-color: #b91c1c;
 }
 
 .btn-icon {
@@ -126,18 +128,21 @@ export default {
 
 .table-responsive {
   overflow-x: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  font-family: 'Poppins', sans-serif;
 }
 
 .table th,
 .table td {
   padding: 0.875rem 1.25rem;
   text-align: left;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #f1f1f1;
 }
 
 .table th {
@@ -155,7 +160,7 @@ export default {
 }
 
 .empleado-row:hover {
-  background-color: #f3f4f6;
+  background-color: #fef2f2;
 }
 
 .status-badge {
@@ -204,7 +209,8 @@ export default {
 }
 
 .empty-icon {
-  color: #9ca3af;
+  color: #dc2626;
+  opacity: 0.5;
   margin-bottom: 1rem;
 }
 
@@ -238,7 +244,7 @@ export default {
   .table tr {
     margin-bottom: 1rem;
     display: block;
-    border: 1px solid #e5e7eb;
+    border: 1px solid #f1f1f1;
     border-radius: 0.5rem;
   }
 
@@ -247,7 +253,7 @@ export default {
     text-align: right;
     padding: 0.75rem 1rem;
     position: relative;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #f1f1f1;
   }
 
   .table td:last-child {
@@ -263,4 +269,3 @@ export default {
   }
 }
 </style>
-

@@ -426,8 +426,11 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .empleado-nuevo {
   padding: 1.5rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .page-header {
@@ -449,7 +452,20 @@ export default {
   margin: 0;
   font-size: 1.75rem;
   font-weight: 600;
-  color: #333;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.header-left h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
 }
 
 .header-actions {
@@ -485,21 +501,25 @@ export default {
 }
 
 .btn-success {
-  background-color: #10b981;
+  background-color: #dc2626;
   color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
 .btn-success:hover {
-  background-color: #059669;
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
 
 .btn-secondary {
-  background-color: #9ca3af;
-  color: white;
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
 }
 
 .btn-secondary:hover {
-  background-color: #6b7280;
+  background-color: #e5e7eb;
 }
 
 .loading-container {
@@ -543,8 +563,8 @@ export default {
 }
 
 .tab-button.active {
-  color: #4361ee;
-  border-bottom-color: #4361ee;
+  color: #dc2626;
+  border-bottom-color: #dc2626;
 }
 
 .tab-icon {
@@ -561,6 +581,7 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   border: 1px solid #e5e7eb;
+  margin-bottom: 1.5rem;
 }
 
 .card-header {
@@ -602,28 +623,28 @@ export default {
 }
 
 .required {
-  color: #ef4444;
+  color: #dc2626;
   margin-left: 0.25rem;
 }
 
 .form-control {
   width: 100%;
   padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   font-size: 0.95rem;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   background-color: white;
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
 }
 
 .form-control.is-invalid {
-  border-color: #ef4444;
+  border-color: #dc2626;
 }
 
 .invalid-feedback {
@@ -631,7 +652,7 @@ export default {
   width: 100%;
   margin-top: 0.25rem;
   font-size: 0.875rem;
-  color: #ef4444;
+  color: #dc2626;
 }
 
 textarea.form-control {
@@ -663,7 +684,7 @@ textarea.form-control {
   display: inline-block;
   width: 50px;
   height: 24px;
-  background-color: #ccc;
+  background-color: #e5e7eb;
   border-radius: 34px;
   transition: .4s;
   margin-right: 10px;
@@ -682,7 +703,7 @@ textarea.form-control {
 }
 
 input:checked + .toggle-label .toggle-inner {
-  background-color: #10b981;
+  background-color: #dc2626;
 }
 
 input:checked + .toggle-label .toggle-inner:before {

@@ -156,10 +156,13 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .roles-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 24px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .role-card {
@@ -277,6 +280,7 @@ export default {
   transition: all 0.2s;
   color: #4b5563;
   gap: 8px;
+  font-family: 'Poppins', sans-serif;
 }
 
 .btn-permissions {

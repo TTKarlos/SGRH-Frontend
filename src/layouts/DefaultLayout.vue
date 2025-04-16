@@ -11,7 +11,7 @@
         <div class="sidebar-header">
           <div class="logo">
             <svg class="logo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="3" width="18" height="18" rx="3" fill="#4361ee" />
+              <rect x="3" y="3" width="18" height="18" rx="3" fill="#dc2626" />
               <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
             </svg>
             <span class="logo-text">SGRH</span>
@@ -86,24 +86,6 @@
       </aside>
 
       <div class="main-wrapper">
-        <header class="main-header">
-          <div class="header-left">
-            <button class="menu-toggle" @click="toggleSidebar">
-              <Menu size="20" />
-            </button>
-            <div class="breadcrumb">
-              <span class="breadcrumb-item">{{ currentRouteName }}</span>
-            </div>
-          </div>
-
-          <div class="header-right">
-            <div class="search-container">
-              <Search size="16" class="search-icon" />
-              <input type="text" placeholder="Buscar..." class="search-input" />
-            </div>
-          </div>
-        </header>
-
         <main class="main-content">
           <slot></slot>
         </main>
@@ -320,7 +302,7 @@ export default {
   width: 40px;
   height: 40px;
   border-radius: 9999px;
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: #fff;
   display: flex;
   align-items: center;
@@ -388,7 +370,7 @@ export default {
 
 .nav-item.router-link-active {
   background-color: #f3f4f6;
-  color: #4361ee;
+  color: #dc2626;
   font-weight: 500;
 }
 
@@ -399,7 +381,7 @@ export default {
   top: 0;
   height: 100%;
   width: 3px;
-  background-color: #4361ee;
+  background-color: #dc2626;
 }
 
 .nav-icon {
@@ -514,7 +496,7 @@ export default {
 
 .search-input:focus {
   outline: none;
-  border-color: #4361ee;
+  border-color: #dc2626;
   background-color: #fff;
 }
 

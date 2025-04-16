@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import usuariosApi from '../api/usuarios.api';
+import { useNotificationStore } from './notification';
 
 export const useUsuariosStore = defineStore('usuarios', {
     state: () => ({
@@ -24,6 +25,7 @@ export const useUsuariosStore = defineStore('usuarios', {
         async fetchUsuarios(params = {}) {
             this.loading = true;
             this.error = null;
+            const notificationStore = useNotificationStore();
 
             try {
                 const mergedParams = {
@@ -33,6 +35,21 @@ export const useUsuariosStore = defineStore('usuarios', {
                     ...params
                 };
 
+                if (mergedParams.id_rol) {
+                    mergedParams.id_rol = Number(mergedParams.id_rol);
+                }
+
+                if (mergedParams.search && typeof mergedParams.search === 'string') {
+                    mergedParams.search = mergedParams.search.trim();
+                }
+
+                Object.keys(mergedParams).forEach(key => {
+                    if (mergedParams[key] === '' || mergedParams[key] === null || mergedParams[key] === undefined) {
+                        delete mergedParams[key];
+                    }
+                });
+
+                console.log('Enviando parámetros a la API:', mergedParams);
                 const response = await usuariosApi.getAll(mergedParams);
 
                 if (response.data.success) {
@@ -40,11 +57,13 @@ export const useUsuariosStore = defineStore('usuarios', {
                     this.pagination = response.data.data.pagination;
                 } else {
                     this.error = response.data.message;
+                    notificationStore.error(this.error, 'Error al cargar usuarios');
                 }
 
                 return response.data.success;
             } catch (error) {
                 this.error = error.response?.data?.message || 'Error al cargar usuarios';
+                notificationStore.error(this.error, 'Error');
                 return false;
             } finally {
                 this.loading = false;
@@ -196,7 +215,7 @@ export const useUsuariosStore = defineStore('usuarios', {
                 }
             } catch (error) {
                 this.error = error.response?.data?.message || `Error al restablecer la contraseña del usuario ${id}`;
-                return false;
+                throw error;
             } finally {
                 this.loading = false;
             }

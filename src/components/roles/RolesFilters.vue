@@ -17,11 +17,6 @@
         <X size="16" />
       </button>
     </div>
-
-    <button @click="$emit('reset')" class="reset-button">
-      <RefreshCw size="16" class="btn-icon" />
-      Reiniciar
-    </button>
   </div>
 </template>
 
@@ -51,6 +46,8 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .filters-container {
   background-color: #ffffff;
   border: 1px solid #e5e7eb;
@@ -61,6 +58,7 @@ export default {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  font-family: 'Poppins', sans-serif;
 }
 
 .search-container {
@@ -84,12 +82,13 @@ export default {
   border-radius: 6px;
   font-size: 14px;
   transition: all 0.2s;
+  font-family: 'Poppins', sans-serif;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #e11d48;
-  box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.1);
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .clear-button {
@@ -114,30 +113,6 @@ export default {
   color: #4b5563;
 }
 
-.reset-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 16px;
-  background-color: #f9fafb;
-  color: #4b5563;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.reset-button:hover {
-  background-color: #f3f4f6;
-  border-color: #9ca3af;
-}
-
-.btn-icon {
-  margin-right: 8px;
-}
-
 @media (max-width: 640px) {
   .filters-container {
     flex-direction: column;
@@ -146,10 +121,6 @@ export default {
 
   .search-container {
     max-width: 100%;
-    width: 100%;
-  }
-
-  .reset-button {
     width: 100%;
   }
 }

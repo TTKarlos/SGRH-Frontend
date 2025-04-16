@@ -135,7 +135,7 @@ export default {
     },
 
     updateFilter(key, value) {
-      const newFilters = { ...this.filters, [key]: value };
+      let newFilters = { ...this.filters, [key]: value };
       this.$emit('update:filters', newFilters);
       this.$emit('apply-filters');
     }
@@ -144,9 +144,12 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .card-header {
   padding: 1.25rem;
   border-bottom: 1px solid #e5e7eb;
+  font-family: 'Poppins', sans-serif;
 }
 
 .filters {
@@ -185,14 +188,15 @@ export default {
 }
 
 .filter-tab:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .filter-tab.active {
-  background-color: #4361ee;
+  background-color: #dc2626;
   color: white;
-  border-color: #4361ee;
+  border-color: #dc2626;
 }
 
 .tab-icon {
@@ -249,8 +253,8 @@ export default {
 
 .search-input:focus {
   outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .select-filter {
@@ -271,8 +275,8 @@ export default {
 
 .select-filter:focus {
   outline: none;
-  border-color: #4361ee;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .btn-outline-secondary {
@@ -282,7 +286,9 @@ export default {
 }
 
 .btn-outline-secondary:hover {
-  background-color: #f3f4f6;
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
 }
 
 .btn-reset {
