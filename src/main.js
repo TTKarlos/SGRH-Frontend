@@ -4,7 +4,7 @@ import App from './App.vue'
 import router from './router'
 import { setupPermissionGuard } from './router/guards/permissionGuard'
 import { vPermission } from './directives/permission'
-import './assets/main.css'
+import './assets/css/main.css'
 
 const pinia = createPinia()
 

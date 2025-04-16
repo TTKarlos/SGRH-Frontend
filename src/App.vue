@@ -7,6 +7,7 @@
 
     <router-view v-else />
 
+
     <Notification />
   </div>
 </template>
@@ -17,10 +18,12 @@ import { useAuthStore } from './stores/auth';
 import { useRouter } from 'vue-router';
 import LoadingSpinner from './components/common/LoadingSpinner.vue';
 import Notification from './components/common/Notification.vue';
+import PermissionDebugger from "./components/debug/PermissionDebugger.vue";
 
 export default {
   name: 'App',
   components: {
+    PermissionDebugger,
     LoadingSpinner,
     Notification
   },
