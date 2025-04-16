@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import rolesApi from '../api/roles.api';
+import { useNotificationStore } from './notification';
 
 export const useRolesStore = defineStore('roles', {
     state: () => ({
@@ -8,31 +9,40 @@ export const useRolesStore = defineStore('roles', {
         miRol: null,
         loading: false,
         error: null,
+        filters: {
+            search: '',
+            order: 'ASC'
+        },
         pagination: {
             page: 1,
             limit: 10,
             totalItems: 0,
             totalPages: 0
-        },
-        filters: {
-            search: '',
-            order: 'ASC'
         }
     }),
 
     getters: {
         getRolById: (state) => (id) => {
-            return state.roles.find(rol => rol.id_rol === Number(id));
+            return state.roles.find(rol => rol.id_rol === id);
         },
 
         getRolNombre: (state) => (id) => {
-            const rol = state.roles.find(rol => rol.id_rol === Number(id));
+            const rol = state.roles.find(rol => rol.id_rol === id);
             return rol ? rol.nombre : `Rol ${id}`;
         },
 
-        hasPermission: (state) => (permissionName) => {
-            if (!state.miRol || !state.miRol.Permisos) return false;
-            return state.miRol.Permisos.some(p => p.nombre === permissionName);
+        getPermisosAgrupados: (state) => {
+            if (!state.currentRol || !state.currentRol.Permisos) return {};
+
+            const grupos = {};
+            state.currentRol.Permisos.forEach(permiso => {
+                if (!grupos[permiso.nombre]) {
+                    grupos[permiso.nombre] = [];
+                }
+                grupos[permiso.nombre].push(permiso);
+            });
+
+            return grupos;
         }
     },
 
@@ -42,25 +52,24 @@ export const useRolesStore = defineStore('roles', {
             this.error = null;
 
             try {
-                const mergedParams = {
+                const response = await rolesApi.getAllRoles({
                     ...this.filters,
                     page: this.pagination.page,
                     limit: this.pagination.limit,
                     ...params
-                };
-
-                const response = await rolesApi.getAll(mergedParams);
+                });
 
                 if (response.data.success) {
                     this.roles = response.data.data.roles;
                     this.pagination = response.data.data.pagination;
+                    return true;
                 } else {
-                    this.error = response.data.message;
+                    throw new Error(response.data.message || 'Error al cargar roles');
                 }
-
-                return response.data.success;
             } catch (error) {
-                this.error = error.response?.data?.message || 'Error al cargar roles';
+                this.error = error.message || 'Error al cargar roles';
+                const notificationStore = useNotificationStore();
+                notificationStore.error(this.error);
                 return false;
             } finally {
                 this.loading = false;
@@ -72,17 +81,18 @@ export const useRolesStore = defineStore('roles', {
             this.error = null;
 
             try {
-                const response = await rolesApi.getById(id);
+                const response = await rolesApi.getRoleById(id);
 
                 if (response.data.success) {
                     this.currentRol = response.data.data.rol;
-                    return this.currentRol;
+                    return response.data.data.rol;
                 } else {
-                    this.error = response.data.message;
-                    return null;
+                    throw new Error(response.data.message || 'Error al cargar el rol');
                 }
             } catch (error) {
-                this.error = error.response?.data?.message || `Error al cargar el rol ${id}`;
+                this.error = error.message || `Error al cargar el rol ${id}`;
+                const notificationStore = useNotificationStore();
+                notificationStore.error(this.error);
                 return null;
             } finally {
                 this.loading = false;
@@ -98,13 +108,14 @@ export const useRolesStore = defineStore('roles', {
 
                 if (response.data.success) {
                     this.miRol = response.data.data.rol;
-                    return this.miRol;
+                    return response.data.data.rol;
                 } else {
-                    this.error = response.data.message;
-                    return null;
+                    throw new Error(response.data.message || 'Error al cargar tu rol');
                 }
             } catch (error) {
-                this.error = error.response?.data?.message || 'Error al cargar tu rol';
+                this.error = error.message || 'Error al cargar tu rol';
+                const notificationStore = useNotificationStore();
+                notificationStore.error(this.error);
                 return null;
             } finally {
                 this.loading = false;
@@ -116,18 +127,19 @@ export const useRolesStore = defineStore('roles', {
             this.error = null;
 
             try {
-                const response = await rolesApi.create(rolData);
+                const response = await rolesApi.createRole(rolData);
 
                 if (response.data.success) {
                     await this.fetchRoles();
                     return response.data.data.rol;
                 } else {
-                    this.error = response.data.message;
-                    return null;
+                    throw new Error(response.data.message || 'Error al crear el rol');
                 }
             } catch (error) {
-                this.error = error.response?.data?.message || 'Error al crear el rol';
-                return null;
+                this.error = error.message || 'Error al crear el rol';
+                const notificationStore = useNotificationStore();
+                notificationStore.error(this.error);
+                throw error;
             } finally {
                 this.loading = false;
             }
@@ -138,26 +150,27 @@ export const useRolesStore = defineStore('roles', {
             this.error = null;
 
             try {
-                const response = await rolesApi.update(id, rolData);
+                const response = await rolesApi.updateRole(id, rolData);
 
                 if (response.data.success) {
-                    if (this.currentRol && this.currentRol.id_rol === Number(id)) {
+                    if (this.currentRol && this.currentRol.id_rol === id) {
                         this.currentRol = response.data.data.rol;
                     }
 
-                    const index = this.roles.findIndex(r => r.id_rol === Number(id));
+                    const index = this.roles.findIndex(r => r.id_rol === id);
                     if (index !== -1) {
                         this.roles[index] = response.data.data.rol;
                     }
 
                     return response.data.data.rol;
                 } else {
-                    this.error = response.data.message;
-                    return null;
+                    throw new Error(response.data.message || 'Error al actualizar el rol');
                 }
             } catch (error) {
-                this.error = error.response?.data?.message || `Error al actualizar el rol ${id}`;
-                return null;
+                this.error = error.message || `Error al actualizar el rol ${id}`;
+                const notificationStore = useNotificationStore();
+                notificationStore.error(this.error);
+                throw error;
             } finally {
                 this.loading = false;
             }
@@ -168,22 +181,23 @@ export const useRolesStore = defineStore('roles', {
             this.error = null;
 
             try {
-                const response = await rolesApi.delete(id);
+                const response = await rolesApi.deleteRole(id);
 
                 if (response.data.success) {
-                    this.roles = this.roles.filter(r => r.id_rol !== Number(id));
+                    this.roles = this.roles.filter(r => r.id_rol !== id);
 
-                    if (this.currentRol && this.currentRol.id_rol === Number(id)) {
+                    if (this.currentRol && this.currentRol.id_rol === id) {
                         this.currentRol = null;
                     }
 
                     return true;
                 } else {
-                    this.error = response.data.message;
-                    return false;
+                    throw new Error(response.data.message || 'Error al eliminar el rol');
                 }
             } catch (error) {
-                this.error = error.response?.data?.message || `Error al eliminar el rol ${id}`;
+                this.error = error.message || `Error al eliminar el rol ${id}`;
+                const notificationStore = useNotificationStore();
+                notificationStore.error(this.error);
                 return false;
             } finally {
                 this.loading = false;
@@ -195,33 +209,34 @@ export const useRolesStore = defineStore('roles', {
             this.error = null;
 
             try {
-                const response = await rolesApi.updatePermisos(id, permisos);
+                const response = await rolesApi.updateRolePermissions(id, permisos);
 
                 if (response.data.success) {
-                    if (this.currentRol && this.currentRol.id_rol === Number(id)) {
+                    if (this.currentRol && this.currentRol.id_rol === id) {
                         this.currentRol = response.data.data.rol;
                     }
 
-                    const index = this.roles.findIndex(r => r.id_rol === Number(id));
+                    const index = this.roles.findIndex(r => r.id_rol === id);
                     if (index !== -1) {
                         this.roles[index] = response.data.data.rol;
                     }
 
                     return response.data.data.rol;
                 } else {
-                    this.error = response.data.message;
-                    return null;
+                    throw new Error(response.data.message || 'Error al actualizar permisos del rol');
                 }
             } catch (error) {
-                this.error = error.response?.data?.message || `Error al actualizar permisos del rol ${id}`;
-                return null;
+                this.error = error.message || `Error al actualizar permisos del rol ${id}`;
+                const notificationStore = useNotificationStore();
+                notificationStore.error(this.error);
+                throw error;
             } finally {
                 this.loading = false;
             }
         },
 
-        setFilters(filters) {
-            this.filters = { ...this.filters, ...filters };
+        updateFilters(newFilters) {
+            this.filters = { ...this.filters, ...newFilters };
         },
 
         resetFilters() {

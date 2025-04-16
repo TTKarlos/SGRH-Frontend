@@ -1,230 +1,233 @@
 <template>
-  <div class="roles-gestion-page">
-    <div class="page-header">
-      <h1>Gestión de Roles y Permisos</h1>
-      <div class="header-actions" v-if="canManageRoles">
-        <button @click="showCreateModal = true" class="btn btn-primary">
-          <PlusCircle size="18" class="btn-icon" />
-          Nuevo Rol
+  <DefaultLayout>
+    <div class="roles-gestion-page">
+      <div class="page-header">
+        <h1>Gestión de Roles y Permisos</h1>
+        <div class="header-actions" v-if="canManageRoles">
+          <button @click="showCreateModal = true" class="btn btn-primary">
+            <PlusCircle size="18" class="btn-icon" />
+            Nuevo Rol
+          </button>
+        </div>
+      </div>
+
+      <div class="filters-container">
+        <div class="search-container">
+          <input
+              v-model="search"
+              type="text"
+              placeholder="Buscar roles..."
+              class="search-input"
+              @input="handleSearchChange"
+          />
+          <Search size="18" class="search-icon" />
+        </div>
+        <div class="order-container">
+          <label>Ordenar:</label>
+          <select v-model="order" @change="handleOrderChange" class="order-select">
+            <option value="ASC">Ascendente</option>
+            <option value="DESC">Descendente</option>
+          </select>
+        </div>
+      </div>
+
+      <div v-if="loading" class="loading-container">
+        <LoadingSpinner message="Cargando roles..." />
+      </div>
+
+      <div v-else-if="error" class="error-container">
+        <div class="error-message">
+          <AlertTriangle size="24" />
+          <p>{{ error }}</p>
+        </div>
+        <button @click="loadRoles" class="btn btn-primary">
+          Reintentar
         </button>
       </div>
-    </div>
 
-    <div class="filters-container">
-      <div class="search-container">
-        <input
-            v-model="search"
-            type="text"
-            placeholder="Buscar roles..."
-            class="search-input"
-            @input="handleSearchChange"
-        />
-        <Search size="18" class="search-icon" />
+      <div v-else-if="roles.length === 0" class="empty-container">
+        <div class="empty-message">
+          <FolderX size="48" />
+          <p>No se encontraron roles</p>
+        </div>
       </div>
-      <div class="order-container">
-        <label>Ordenar:</label>
-        <select v-model="order" @change="handleOrderChange" class="order-select">
-          <option value="ASC">Ascendente</option>
-          <option value="DESC">Descendente</option>
-        </select>
-      </div>
-    </div>
 
-    <div v-if="loading" class="loading-container">
-      <LoadingSpinner message="Cargando roles..." />
-    </div>
-
-    <div v-else-if="error" class="error-container">
-      <div class="error-message">
-        <AlertTriangle size="24" />
-        <p>{{ error }}</p>
-      </div>
-      <button @click="loadRoles" class="btn btn-primary">
-        Reintentar
-      </button>
-    </div>
-
-    <div v-else-if="roles.length === 0" class="empty-container">
-      <div class="empty-message">
-        <FolderX size="48" />
-        <p>No se encontraron roles</p>
-      </div>
-    </div>
-
-    <div v-else class="roles-grid">
-      <div v-for="rol in roles" :key="rol.id_rol" class="rol-card">
-        <div class="rol-card-header">
-          <h2>{{ rol.nombre }}</h2>
-          <div class="rol-actions" v-if="canManageRoles">
-            <button @click="editRol(rol)" class="btn-icon-only" title="Editar rol">
-              <Edit size="18" />
-            </button>
+      <div v-else class="roles-grid">
+        <div v-for="rol in roles" :key="rol.id_rol" class="rol-card">
+          <div class="rol-card-header">
+            <h2>{{ rol.nombre }}</h2>
+            <div class="rol-actions" v-if="canManageRoles">
+              <button @click="editRol(rol)" class="btn-icon-only" title="Editar rol">
+                <Edit size="18" />
+              </button>
+              <button
+                  @click="confirmDeleteRol(rol)"
+                  class="btn-icon-only"
+                  title="Eliminar rol"
+                  :disabled="rol.nombre === 'ADMIN'"
+              >
+                <Trash2 size="18" />
+              </button>
+            </div>
+          </div>
+          <div class="rol-card-body">
+            <p class="rol-description">{{ rol.descripcion || 'Sin descripción' }}</p>
+            <div class="rol-permisos">
+              <h3>Permisos</h3>
+              <div v-if="rol.Permisos && rol.Permisos.length > 0" class="permisos-list">
+                <div v-for="permiso in rol.Permisos" :key="permiso.id_permiso" class="permiso-badge">
+                  <span>{{ permiso.nombre }}</span>
+                  <span class="permiso-tipo" :class="permiso.tipo === 'Lectura' ? 'tipo-lectura' : 'tipo-escritura'">
+                    {{ permiso.tipo }}
+                  </span>
+                </div>
+              </div>
+              <p v-else class="no-permisos">Este rol no tiene permisos asignados</p>
+            </div>
             <button
-                @click="confirmDeleteRol(rol)"
-                class="btn-icon-only"
-                title="Eliminar rol"
-                :disabled="rol.nombre === 'ADMIN'"
+                v-if="canManageRoles && rol.nombre !== 'ADMIN'"
+                @click="editPermisos(rol)"
+                class="btn btn-secondary btn-sm"
             >
-              <Trash2 size="18" />
+              <Shield size="16" class="btn-icon" />
+              Gestionar Permisos
             </button>
           </div>
         </div>
-        <div class="rol-card-body">
-          <p class="rol-description">{{ rol.descripcion || 'Sin descripción' }}</p>
-          <div class="rol-permisos">
-            <h3>Permisos</h3>
-            <div v-if="rol.Permisos && rol.Permisos.length > 0" class="permisos-list">
-              <div v-for="permiso in rol.Permisos" :key="permiso.id_permiso" class="permiso-badge">
-                <span>{{ permiso.nombre }}</span>
-                <span class="permiso-tipo" :class="permiso.tipo === 'Lectura' ? 'tipo-lectura' : 'tipo-escritura'">
-                  {{ permiso.tipo }}
-                </span>
+      </div>
+
+      <!-- Modal para crear/editar rol -->
+      <div v-if="showCreateModal || showEditModal" class="modal-overlay">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h3>{{ showEditModal ? 'Editar Rol' : 'Nuevo Rol' }}</h3>
+            <button @click="closeModals" class="btn-close">
+              <X size="18" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="nombre">Nombre del Rol</label>
+              <input
+                  id="nombre"
+                  v-model="rolForm.nombre"
+                  type="text"
+                  class="form-control"
+                  :class="{ 'is-invalid': validationErrors.nombre }"
+                  placeholder="Nombre del rol"
+              />
+              <div v-if="validationErrors.nombre" class="invalid-feedback">
+                {{ validationErrors.nombre }}
               </div>
             </div>
-            <p v-else class="no-permisos">Este rol no tiene permisos asignados</p>
-          </div>
-          <button
-              v-if="canManageRoles && rol.nombre !== 'ADMIN'"
-              @click="editPermisos(rol)"
-              class="btn btn-secondary btn-sm"
-          >
-            <Shield size="16" class="btn-icon" />
-            Gestionar Permisos
-          </button>
-        </div>
-      </div>
-    </div>
 
-    <!-- Modal para crear/editar rol -->
-    <div v-if="showCreateModal || showEditModal" class="modal-overlay">
-      <div class="modal-container">
-        <div class="modal-header">
-          <h3>{{ showEditModal ? 'Editar Rol' : 'Nuevo Rol' }}</h3>
-          <button @click="closeModals" class="btn-close">
-            <X size="18" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="nombre">Nombre del Rol</label>
-            <input
-                id="nombre"
-                v-model="rolForm.nombre"
-                type="text"
-                class="form-control"
-                :class="{ 'is-invalid': validationErrors.nombre }"
-                placeholder="Nombre del rol"
-            />
-            <div v-if="validationErrors.nombre" class="invalid-feedback">
-              {{ validationErrors.nombre }}
+            <div class="form-group">
+              <label for="descripcion">Descripción</label>
+              <textarea
+                  id="descripcion"
+                  v-model="rolForm.descripcion"
+                  class="form-control"
+                  placeholder="Descripción del rol"
+                  rows="3"
+              ></textarea>
             </div>
           </div>
-
-          <div class="form-group">
-            <label for="descripcion">Descripción</label>
-            <textarea
-                id="descripcion"
-                v-model="rolForm.descripcion"
-                class="form-control"
-                placeholder="Descripción del rol"
-                rows="3"
-            ></textarea>
+          <div class="modal-footer">
+            <button @click="closeModals" class="btn btn-secondary">
+              Cancelar
+            </button>
+            <button @click="saveRol" class="btn btn-primary" :disabled="savingRol">
+              <Loader v-if="savingRol" size="16" class="btn-icon spinner" />
+              <Save v-else size="16" class="btn-icon" />
+              Guardar
+            </button>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button @click="closeModals" class="btn btn-secondary">
-            Cancelar
-          </button>
-          <button @click="saveRol" class="btn btn-primary" :disabled="savingRol">
-            <Loader v-if="savingRol" size="16" class="btn-icon spinner" />
-            <Save v-else size="16" class="btn-icon" />
-            Guardar
-          </button>
         </div>
       </div>
-    </div>
 
-    <!-- Modal para gestionar permisos -->
-    <div v-if="showPermisosModal" class="modal-overlay">
-      <div class="modal-container modal-lg">
-        <div class="modal-header">
-          <h3>Gestionar Permisos: {{ currentRol?.nombre }}</h3>
-          <button @click="closeModals" class="btn-close">
-            <X size="18" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <div v-if="loadingPermisos" class="loading-container">
-            <LoadingSpinner message="Cargando permisos..." />
+      <!-- Modal para gestionar permisos -->
+      <div v-if="showPermisosModal" class="modal-overlay">
+        <div class="modal-container modal-lg">
+          <div class="modal-header">
+            <h3>Gestionar Permisos: {{ currentRol?.nombre }}</h3>
+            <button @click="closeModals" class="btn-close">
+              <X size="18" />
+            </button>
           </div>
-          <div v-else>
-            <div class="permisos-grupos">
-              <div v-for="(permisos, nombre) in permisosAgrupados" :key="nombre" class="permiso-grupo">
-                <h4>{{ nombre }}</h4>
-                <div class="permisos-opciones">
-                  <div v-for="permiso in permisos" :key="permiso.id_permiso" class="permiso-opcion">
-                    <label class="checkbox-container">
-                      <input
-                          type="checkbox"
-                          :value="permiso.id_permiso"
-                          v-model="selectedPermisos"
-                      />
-                      <span class="checkmark"></span>
-                      <span class="permiso-tipo" :class="permiso.tipo === 'Lectura' ? 'tipo-lectura' : 'tipo-escritura'">
-                        {{ permiso.tipo }}
-                      </span>
-                    </label>
+          <div class="modal-body">
+            <div v-if="loadingPermisos" class="loading-container">
+              <LoadingSpinner message="Cargando permisos..." />
+            </div>
+            <div v-else>
+              <div class="permisos-grupos">
+                <div v-for="(permisos, nombre) in permisosAgrupados" :key="nombre" class="permiso-grupo">
+                  <h4>{{ nombre }}</h4>
+                  <div class="permisos-opciones">
+                    <div v-for="permiso in permisos" :key="permiso.id_permiso" class="permiso-opcion">
+                      <label class="checkbox-container">
+                        <input
+                            type="checkbox"
+                            :value="permiso.id_permiso"
+                            v-model="selectedPermisos"
+                        />
+                        <span class="checkmark"></span>
+                        <span class="permiso-tipo" :class="permiso.tipo === 'Lectura' ? 'tipo-lectura' : 'tipo-escritura'">
+                          {{ permiso.tipo }}
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button @click="closeModals" class="btn btn-secondary">
-            Cancelar
-          </button>
-          <button @click="savePermisos" class="btn btn-primary" :disabled="savingPermisos">
-            <Loader v-if="savingPermisos" size="16" class="btn-icon spinner" />
-            <Save v-else size="16" class="btn-icon" />
-            Guardar Permisos
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal de confirmación de eliminación -->
-    <div v-if="showDeleteModal" class="modal-overlay">
-      <div class="modal-container">
-        <div class="modal-header">
-          <h3>Confirmar eliminación</h3>
-          <button @click="showDeleteModal = false" class="btn-close">
-            <X size="18" />
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>¿Está seguro de que desea eliminar el rol <strong>{{ rolToDelete?.nombre }}</strong>?</p>
-          <p class="text-danger">Esta acción no se puede deshacer.</p>
-        </div>
-        <div class="modal-footer">
-          <button @click="showDeleteModal = false" class="btn btn-secondary">
-            Cancelar
-          </button>
-          <button @click="deleteRol" class="btn btn-danger" :disabled="deletingRol">
-            <Loader v-if="deletingRol" size="16" class="btn-icon spinner" />
-            <Trash2 v-else size="16" class="btn-icon" />
-            Eliminar
-          </button>
+          <div class="modal-footer">
+            <button @click="closeModals" class="btn btn-secondary">
+              Cancelar
+            </button>
+            <button @click="savePermisos" class="btn btn-primary" :disabled="savingPermisos">
+              <Loader v-if="savingPermisos" size="16" class="btn-icon spinner" />
+              <Save v-else size="16" class="btn-icon" />
+              Guardar Permisos
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Componente de notificación -->
-    <Notification />
-  </div>
+      <!-- Modal de confirmación de eliminación -->
+      <div v-if="showDeleteModal" class="modal-overlay">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h3>Confirmar eliminación</h3>
+            <button @click="showDeleteModal = false" class="btn-close">
+              <X size="18" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>¿Está seguro de que desea eliminar el rol <strong>{{ rolToDelete?.nombre }}</strong>?</p>
+            <p class="text-danger">Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="modal-footer">
+            <button @click="showDeleteModal = false" class="btn btn-secondary">
+              Cancelar
+            </button>
+            <button @click="deleteRol" class="btn btn-danger" :disabled="deletingRol">
+              <Loader v-if="deletingRol" size="16" class="btn-icon spinner" />
+              <Trash2 v-else size="16" class="btn-icon" />
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Componente de notificación -->
+      <Notification />
+    </div>
+  </DefaultLayout>
 </template>
 
 <script>
+import DefaultLayout from '../../layouts/DefaultLayout.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRolesStore } from '../../stores/roles';
 import { usePermisosStore } from '../../stores/permisos';
@@ -232,6 +235,7 @@ import { useAuthStore } from '../../stores/auth';
 import { useNotificationStore } from '../../stores/notification';
 import LoadingSpinner from '../../components/common/LoadingSpinner.vue';
 import Notification from '../../components/common/Notification.vue';
+import PermissionCheck from '../../components/common/PermissionCheck.vue';
 import {
   PlusCircle, Edit, Trash2, Search, AlertTriangle, FolderX,
   Shield, Save, X, Loader
@@ -242,8 +246,10 @@ import debounce from 'lodash/debounce';
 export default {
   name: 'RolesGestion',
   components: {
+    DefaultLayout,
     LoadingSpinner,
     Notification,
+    PermissionCheck,
     PlusCircle, Edit, Trash2, Search, AlertTriangle, FolderX,
     Shield, Save, X, Loader
   },

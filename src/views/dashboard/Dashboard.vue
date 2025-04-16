@@ -1,277 +1,280 @@
 <template>
-  <div class="dashboard">
-    <div class="dashboard-header">
-      <h1 class="dashboard-title">Dashboard</h1>
-      <div class="dashboard-actions">
-        <div class="date-filter">
-          <Calendar size="16" class="date-icon" />
-          <select class="form-control select-period">
-            <option value="today">Hoy</option>
-            <option value="week">Esta semana</option>
-            <option value="month" selected>Este mes</option>
-            <option value="quarter">Este trimestre</option>
-            <option value="year">Este año</option>
-          </select>
-        </div>
-        <button class="btn btn-outline-primary">
-          <Download size="16" class="btn-icon" />
-          Exportar
-        </button>
-      </div>
-    </div>
-
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon employee-icon">
-          <Users size="20" />
-        </div>
-        <div class="stat-content">
-          <div class="stat-header">
-            <h3 class="stat-title">Total Empleados</h3>
-            <span class="stat-badge positive">+3.2%</span>
+  <DefaultLayout>
+    <div class="dashboard">
+      <div class="dashboard-header">
+        <h1 class="dashboard-title">Dashboard</h1>
+        <div class="dashboard-actions">
+          <div class="date-filter">
+            <Calendar size="16" class="date-icon" />
+            <select class="form-control select-period">
+              <option value="today">Hoy</option>
+              <option value="week">Esta semana</option>
+              <option value="month" selected>Este mes</option>
+              <option value="quarter">Este trimestre</option>
+              <option value="year">Este año</option>
+            </select>
           </div>
-          <p class="stat-value">245</p>
-          <div class="stat-footer">
-            <span class="stat-label">18 nuevos este mes</span>
-            <ArrowUpRight size="16" class="trend-icon positive" />
-          </div>
+          <button class="btn btn-outline-primary">
+            <Download size="16" class="btn-icon" />
+            Exportar
+          </button>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon contract-icon">
-          <FileText size="20" />
-        </div>
-        <div class="stat-content">
-          <div class="stat-header">
-            <h3 class="stat-title">Contratos Activos</h3>
-            <span class="stat-badge negative">-1.4%</span>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon employee-icon">
+            <Users size="20" />
           </div>
-          <p class="stat-value">238</p>
-          <div class="stat-footer">
-            <span class="stat-label">5 por vencer</span>
-            <AlertCircle size="16" class="trend-icon warning" />
+          <div class="stat-content">
+            <div class="stat-header">
+              <h3 class="stat-title">Total Empleados</h3>
+              <span class="stat-badge positive">+3.2%</span>
+            </div>
+            <p class="stat-value">245</p>
+            <div class="stat-footer">
+              <span class="stat-label">18 nuevos este mes</span>
+              <ArrowUpRight size="16" class="trend-icon positive" />
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon contract-icon">
+            <FileText size="20" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-header">
+              <h3 class="stat-title">Contratos Activos</h3>
+              <span class="stat-badge negative">-1.4%</span>
+            </div>
+            <p class="stat-value">238</p>
+            <div class="stat-footer">
+              <span class="stat-label">5 por vencer</span>
+              <AlertCircle size="16" class="trend-icon warning" />
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon absence-icon">
+            <Calendar size="20" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-header">
+              <h3 class="stat-title">Ausencias</h3>
+              <span class="stat-badge neutral">0%</span>
+            </div>
+            <p class="stat-value">12</p>
+            <div class="stat-footer">
+              <span class="stat-label">3 pendientes de aprobar</span>
+              <Clock size="16" class="trend-icon neutral" />
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon document-icon">
+            <FolderOpen size="20" />
+          </div>
+          <div class="stat-content">
+            <div class="stat-header">
+              <h3 class="stat-title">Documentos</h3>
+              <span class="stat-badge positive">+5.7%</span>
+            </div>
+            <p class="stat-value">156</p>
+            <div class="stat-footer">
+              <span class="stat-label">24 nuevos este mes</span>
+              <ArrowUpRight size="16" class="trend-icon positive" />
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon absence-icon">
-          <Calendar size="20" />
-        </div>
-        <div class="stat-content">
-          <div class="stat-header">
-            <h3 class="stat-title">Ausencias</h3>
-            <span class="stat-badge neutral">0%</span>
+      <div class="dashboard-row">
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3 class="chart-title">Distribución por Departamentos</h3>
+            <div class="chart-actions">
+              <button class="btn btn-sm btn-outline-secondary">
+                <BarChart3 size="14" class="btn-icon" />
+                Barras
+              </button>
+              <button class="btn btn-sm btn-outline-secondary active">
+                <PieChart size="14" class="btn-icon" />
+                Circular
+              </button>
+            </div>
           </div>
-          <p class="stat-value">12</p>
-          <div class="stat-footer">
-            <span class="stat-label">3 pendientes de aprobar</span>
-            <Clock size="16" class="trend-icon neutral" />
+          <div class="chart">
+            <canvas ref="departmentChart" height="250"></canvas>
+          </div>
+          <div class="chart-legend">
+            <div class="legend-item" v-for="(dept, index) in departmentData" :key="index">
+              <span class="legend-color" :style="{ backgroundColor: chartColors[index % chartColors.length] }"></span>
+              <span class="legend-label">{{ dept.name }}</span>
+              <span class="legend-value">{{ dept.count }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="activity-container">
+          <div class="activity-header">
+            <h3 class="activity-title">Actividad Reciente</h3>
+            <button class="btn btn-sm btn-link">Ver todo</button>
+          </div>
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-icon contract-activity">
+                <FileText size="16" />
+              </div>
+              <div class="activity-content">
+                <p class="activity-text">Nuevo contrato creado para <strong>María López</strong></p>
+                <span class="activity-time">Hace 2 horas</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-icon employee-activity">
+                <UserPlus size="16" />
+              </div>
+              <div class="activity-content">
+                <p class="activity-text">Nuevo empleado <strong>Juan Pérez</strong> añadido</p>
+                <span class="activity-time">Hace 5 horas</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-icon document-activity">
+                <Upload size="16" />
+              </div>
+              <div class="activity-content">
+                <p class="activity-text"><strong>Ana García</strong> subió 3 documentos</p>
+                <span class="activity-time">Ayer</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-icon absence-activity">
+                <CalendarX size="16" />
+              </div>
+              <div class="activity-content">
+                <p class="activity-text">Solicitud de ausencia de <strong>Carlos Ruiz</strong></p>
+                <span class="activity-time">Hace 2 días</span>
+              </div>
+            </div>
+
+            <div class="activity-item">
+              <div class="activity-icon employee-activity">
+                <UserMinus size="16" />
+              </div>
+              <div class="activity-content">
+                <p class="activity-text">Empleado <strong>Pedro Sánchez</strong> dado de baja</p>
+                <span class="activity-time">Hace 3 días</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="stat-card">
-        <div class="stat-icon document-icon">
-          <FolderOpen size="20" />
-        </div>
-        <div class="stat-content">
-          <div class="stat-header">
-            <h3 class="stat-title">Documentos</h3>
-            <span class="stat-badge positive">+5.7%</span>
+      <div class="dashboard-row">
+        <div class="upcoming-container">
+          <div class="upcoming-header">
+            <h3 class="upcoming-title">Próximos Vencimientos</h3>
+            <div class="upcoming-tabs">
+              <button class="upcoming-tab active">Contratos</button>
+              <button class="upcoming-tab">Documentos</button>
+            </div>
           </div>
-          <p class="stat-value">156</p>
-          <div class="stat-footer">
-            <span class="stat-label">24 nuevos este mes</span>
-            <ArrowUpRight size="16" class="trend-icon positive" />
-          </div>
-        </div>
-      </div>
-    </div>
+          <div class="upcoming-list">
+            <div class="upcoming-item">
+              <div class="upcoming-date">
+                <span class="date-day">15</span>
+                <span class="date-month">Jun</span>
+              </div>
+              <div class="upcoming-content">
+                <p class="upcoming-title">Contrato de María López</p>
+                <p class="upcoming-subtitle">Contrato temporal - Tecnología</p>
+              </div>
+              <div class="upcoming-status warning">
+                <Clock size="16" class="status-icon" />
+                <span>15 días</span>
+              </div>
+            </div>
 
-    <div class="dashboard-row">
-      <div class="chart-container">
-        <div class="chart-header">
-          <h3 class="chart-title">Distribución por Departamentos</h3>
-          <div class="chart-actions">
-            <button class="btn btn-sm btn-outline-secondary">
-              <BarChart3 size="14" class="btn-icon" />
-              Barras
+            <div class="upcoming-item">
+              <div class="upcoming-date">
+                <span class="date-day">22</span>
+                <span class="date-month">Jun</span>
+              </div>
+              <div class="upcoming-content">
+                <p class="upcoming-title">Contrato de Juan Pérez</p>
+                <p class="upcoming-subtitle">Contrato temporal - Ventas</p>
+              </div>
+              <div class="upcoming-status warning">
+                <Clock size="16" class="status-icon" />
+                <span>22 días</span>
+              </div>
+            </div>
+
+            <div class="upcoming-item">
+              <div class="upcoming-date">
+                <span class="date-day">30</span>
+                <span class="date-month">Jun</span>
+              </div>
+              <div class="upcoming-content">
+                <p class="upcoming-title">Contrato de Ana García</p>
+                <p class="upcoming-subtitle">Contrato temporal - RRHH</p>
+              </div>
+              <div class="upcoming-status warning">
+                <Clock size="16" class="status-icon" />
+                <span>30 días</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="quick-actions-container">
+          <h3 class="quick-actions-title">Acciones Rápidas</h3>
+          <div class="quick-actions-grid">
+            <button class="quick-action">
+              <UserPlus size="20" class="action-icon" />
+              <span class="action-text">Nuevo Empleado</span>
             </button>
-            <button class="btn btn-sm btn-outline-secondary active">
-              <PieChart size="14" class="btn-icon" />
-              Circular
+
+            <button class="quick-action">
+              <FileText size="20" class="action-icon" />
+              <span class="action-text">Nuevo Contrato</span>
+            </button>
+
+            <button class="quick-action">
+              <Upload size="20" class="action-icon" />
+              <span class="action-text">Subir Documento</span>
+            </button>
+
+            <button class="quick-action">
+              <CalendarPlus size="20" class="action-icon" />
+              <span class="action-text">Registrar Ausencia</span>
+            </button>
+
+            <button class="quick-action">
+              <BarChart2 size="20" class="action-icon" />
+              <span class="action-text">Generar Informe</span>
+            </button>
+
+            <button class="quick-action">
+              <Settings size="20" class="action-icon" />
+              <span class="action-text">Configuración</span>
             </button>
           </div>
         </div>
-        <div class="chart">
-          <canvas ref="departmentChart" height="250"></canvas>
-        </div>
-        <div class="chart-legend">
-          <div class="legend-item" v-for="(dept, index) in departmentData" :key="index">
-            <span class="legend-color" :style="{ backgroundColor: chartColors[index % chartColors.length] }"></span>
-            <span class="legend-label">{{ dept.name }}</span>
-            <span class="legend-value">{{ dept.count }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="activity-container">
-        <div class="activity-header">
-          <h3 class="activity-title">Actividad Reciente</h3>
-          <button class="btn btn-sm btn-link">Ver todo</button>
-        </div>
-        <div class="activity-list">
-          <div class="activity-item">
-            <div class="activity-icon contract-activity">
-              <FileText size="16" />
-            </div>
-            <div class="activity-content">
-              <p class="activity-text">Nuevo contrato creado para <strong>María López</strong></p>
-              <span class="activity-time">Hace 2 horas</span>
-            </div>
-          </div>
-
-          <div class="activity-item">
-            <div class="activity-icon employee-activity">
-              <UserPlus size="16" />
-            </div>
-            <div class="activity-content">
-              <p class="activity-text">Nuevo empleado <strong>Juan Pérez</strong> añadido</p>
-              <span class="activity-time">Hace 5 horas</span>
-            </div>
-          </div>
-
-          <div class="activity-item">
-            <div class="activity-icon document-activity">
-              <Upload size="16" />
-            </div>
-            <div class="activity-content">
-              <p class="activity-text"><strong>Ana García</strong> subió 3 documentos</p>
-              <span class="activity-time">Ayer</span>
-            </div>
-          </div>
-
-          <div class="activity-item">
-            <div class="activity-icon absence-activity">
-              <CalendarX size="16" />
-            </div>
-            <div class="activity-content">
-              <p class="activity-text">Solicitud de ausencia de <strong>Carlos Ruiz</strong></p>
-              <span class="activity-time">Hace 2 días</span>
-            </div>
-          </div>
-
-          <div class="activity-item">
-            <div class="activity-icon employee-activity">
-              <UserMinus size="16" />
-            </div>
-            <div class="activity-content">
-              <p class="activity-text">Empleado <strong>Pedro Sánchez</strong> dado de baja</p>
-              <span class="activity-time">Hace 3 días</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
-
-    <div class="dashboard-row">
-      <div class="upcoming-container">
-        <div class="upcoming-header">
-          <h3 class="upcoming-title">Próximos Vencimientos</h3>
-          <div class="upcoming-tabs">
-            <button class="upcoming-tab active">Contratos</button>
-            <button class="upcoming-tab">Documentos</button>
-          </div>
-        </div>
-        <div class="upcoming-list">
-          <div class="upcoming-item">
-            <div class="upcoming-date">
-              <span class="date-day">15</span>
-              <span class="date-month">Jun</span>
-            </div>
-            <div class="upcoming-content">
-              <p class="upcoming-title">Contrato de María López</p>
-              <p class="upcoming-subtitle">Contrato temporal - Tecnología</p>
-            </div>
-            <div class="upcoming-status warning">
-              <Clock size="16" class="status-icon" />
-              <span>15 días</span>
-            </div>
-          </div>
-
-          <div class="upcoming-item">
-            <div class="upcoming-date">
-              <span class="date-day">22</span>
-              <span class="date-month">Jun</span>
-            </div>
-            <div class="upcoming-content">
-              <p class="upcoming-title">Contrato de Juan Pérez</p>
-              <p class="upcoming-subtitle">Contrato temporal - Ventas</p>
-            </div>
-            <div class="upcoming-status warning">
-              <Clock size="16" class="status-icon" />
-              <span>22 días</span>
-            </div>
-          </div>
-
-          <div class="upcoming-item">
-            <div class="upcoming-date">
-              <span class="date-day">30</span>
-              <span class="date-month">Jun</span>
-            </div>
-            <div class="upcoming-content">
-              <p class="upcoming-title">Contrato de Ana García</p>
-              <p class="upcoming-subtitle">Contrato temporal - RRHH</p>
-            </div>
-            <div class="upcoming-status warning">
-              <Clock size="16" class="status-icon" />
-              <span>30 días</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="quick-actions-container">
-        <h3 class="quick-actions-title">Acciones Rápidas</h3>
-        <div class="quick-actions-grid">
-          <button class="quick-action">
-            <UserPlus size="20" class="action-icon" />
-            <span class="action-text">Nuevo Empleado</span>
-          </button>
-
-          <button class="quick-action">
-            <FileText size="20" class="action-icon" />
-            <span class="action-text">Nuevo Contrato</span>
-          </button>
-
-          <button class="quick-action">
-            <Upload size="20" class="action-icon" />
-            <span class="action-text">Subir Documento</span>
-          </button>
-
-          <button class="quick-action">
-            <CalendarPlus size="20" class="action-icon" />
-            <span class="action-text">Registrar Ausencia</span>
-          </button>
-
-          <button class="quick-action">
-            <BarChart2 size="20" class="action-icon" />
-            <span class="action-text">Generar Informe</span>
-          </button>
-
-          <button class="quick-action">
-            <Settings size="20" class="action-icon" />
-            <span class="action-text">Configuración</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
+  </DefaultLayout>
 </template>
 
 <script>
+import DefaultLayout from '../../layouts/DefaultLayout.vue';
 import { ref, onMounted, onBeforeUnmount } from 'vue';
 import Chart from 'chart.js/auto';
 import {
@@ -297,6 +300,7 @@ import {
 export default {
   name: 'Dashboard',
   components: {
+    DefaultLayout,
     Users,
     FileText,
     Calendar,
@@ -968,4 +972,3 @@ export default {
   }
 }
 </style>
-

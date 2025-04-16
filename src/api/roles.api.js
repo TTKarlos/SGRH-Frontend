@@ -1,31 +1,31 @@
-import api from "./axios"
+import api from './axios';
 
 export default {
-    getAll(params) {
-        return api.get("/rol", { params })
+    getAllRoles(params = {}) {
+        return api.get('/rol', { params });
     },
 
-    getById(id) {
-        return api.get(`/rol/${id}`)
+    getRoleById(id) {
+        return api.get(`/rol/${id}`);
     },
 
     getMiRol() {
-        return api.get("/rol/mi-rol")
+        return api.get('/rol/mi-rol');
     },
 
-    create(rol) {
-        return api.post("/rol", rol)
+    createRole(roleData) {
+        return api.post('/rol', roleData);
     },
 
-    update(id, rol) {
-        return api.put(`/rol/${id}`, rol)
+    updateRole(id, roleData) {
+        return api.put(`/rol/${id}`, roleData);
     },
 
-    delete(id) {
-        return api.delete(`/rol/${id}`)
+    deleteRole(id) {
+        return api.delete(`/rol/${id}`);
     },
 
-    updatePermisos(id, permisos) {
-        return api.put(`/rol/${id}/permisos`, { permisos })
+    updateRolePermissions(id, permissions) {
+        return api.put(`/rol/${id}/permisos`, { permisos: permissions });
     }
-}
+};

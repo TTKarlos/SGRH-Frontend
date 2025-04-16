@@ -1,35 +1,38 @@
 <template>
-  <div class="empleados-page">
-    <EmpleadosHeader @nuevo-empleado="crearNuevoEmpleado" />
+  <DefaultLayout>
+    <div class="empleados-page">
+      <EmpleadosHeader @nuevo-empleado="crearNuevoEmpleado" />
 
-    <div class="card">
-      <EmpleadosFiltros
-          v-model:search="searchQuery"
-          v-model:filters="filters"
-          @search="handleSearch"
-          @apply-filters="applyFilters"
-          @reset-filters="resetFilters"
-      />
+      <div class="card">
+        <EmpleadosFiltros
+            v-model:search="searchQuery"
+            v-model:filters="filters"
+            @search="handleSearch"
+            @apply-filters="applyFilters"
+            @reset-filters="resetFilters"
+        />
 
-      <EmpleadosTabla
-          :loading="empleadosStore.loading"
-          :error="empleadosStore.error"
-          :empleados="empleadosStore.empleados"
-          :filters="filters"
-          @retry="loadEmpleados"
-          @reset-filters="resetFilters"
-          @view-empleado="goToEmpleadoDetalle"
-      />
+        <EmpleadosTabla
+            :loading="empleadosStore.loading"
+            :error="empleadosStore.error"
+            :empleados="empleadosStore.empleados"
+            :filters="filters"
+            @retry="loadEmpleados"
+            @reset-filters="resetFilters"
+            @view-empleado="goToEmpleadoDetalle"
+        />
 
-      <EmpleadosPaginacion
-          :pagination="empleadosStore.pagination"
-          @change-page="changePage"
-      />
+        <EmpleadosPaginacion
+            :pagination="empleadosStore.pagination"
+            @change-page="changePage"
+        />
+      </div>
     </div>
-  </div>
+  </DefaultLayout>
 </template>
 
 <script>
+import DefaultLayout from '../../layouts/DefaultLayout.vue';
 import { useEmpleadosStore } from '../../stores/empleados';
 import { useNotificationStore } from '../../stores/notification';
 import EmpleadosHeader from '../../components/empleados/EmpleadosHeader.vue';
@@ -40,6 +43,7 @@ import EmpleadosPaginacion from '../../components/empleados/EmpleadosPaginacion.
 export default {
   name: 'Empleados',
   components: {
+    DefaultLayout,
     EmpleadosHeader,
     EmpleadosFiltros,
     EmpleadosTabla,
@@ -54,8 +58,7 @@ export default {
         activo: null,
         id_departamento: '',
         id_centro: ''
-      },
-      debug: false
+      }
     };
   },
   setup() {
@@ -84,7 +87,11 @@ export default {
     },
 
     applyFilters() {
-      this.empleadosStore.setFilters({...this.filters});
+      this.empleadosStore.filters = {...this.filters};
+
+      this.empleadosStore.pagination.page = 1;
+
+      this.empleadosStore.fetchEmpleados();
 
       let mensaje = 'Filtros aplicados';
       if (this.filters.search) {
@@ -107,13 +114,21 @@ export default {
         id_centro: ''
       };
 
-      this.empleadosStore.resetFilters();
+      this.empleadosStore.filters = {...this.filters};
+
+      this.empleadosStore.pagination.page = 1;
+
+      this.empleadosStore.fetchEmpleados();
+
       this.notificationStore.info('Se han eliminado todos los filtros', 'Filtros');
     },
 
     changePage(page) {
-      console.log('Cambiando a página:', page);
-      this.empleadosStore.setPage(page);
+      console.log("Cambiando a página:", page);
+
+      this.empleadosStore.pagination.page = parseInt(page);
+
+      this.empleadosStore.fetchEmpleados();
     },
 
     goToEmpleadoDetalle(id) {
@@ -145,26 +160,4 @@ export default {
   overflow: hidden;
   border: 1px solid #e5e7eb;
 }
-
-.debug-panel {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-}
-
-.debug-panel h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-  font-size: 1rem;
-}
-
-.debug-panel pre {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family: monospace;
-  font-size: 0.875rem;
-}
 </style>
-

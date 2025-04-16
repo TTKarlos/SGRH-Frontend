@@ -1,43 +1,36 @@
 <template>
   <div class="login-form">
-    <h1 class="title">Iniciar Sesión</h1>
+    <h2 class="form-title">Iniciar Sesión</h2>
 
-    <form @submit.prevent="handleSubmit">
+    <form @submit.prevent="handleLogin">
       <FormInput
           id="email"
-          v-model="formData.email"
-          type="email"
+          v-model="credentials.email"
           label="Email"
-          placeholder="Ingrese su email"
-          :error="errors.email"
-          :disabled="authStore.loading"
-          @input="clearFieldError('email')"
-          autocomplete="email"
+          type="email"
+          placeholder="Ingresar Email"
           :icon="Mail"
+          required
       />
 
       <PasswordInput
           id="password"
-          v-model="formData.password"
+          v-model="credentials.password"
           label="Contraseña"
-          placeholder="Ingrese su contraseña"
-          :error="errors.password"
-          :disabled="authStore.loading"
-          @input="clearFieldError('password')"
-          autocomplete="current-password"
+          placeholder="Ingresar su contraseña"
+          required
       />
 
-      <FormOptions
-          :remember="rememberMe"
-          @update:remember="rememberMe = $event"
-      />
+      <FormOptions v-model:remember="credentials.remember" />
 
-      <div v-if="errors.auth || authStore.error" class="alert alert-danger">
-        <span>{{ errors.auth || authStore.error }}</span>
-      </div>
+      <AlertMessage
+          v-if="localError"
+          type="danger"
+          :message="localError"
+      />
 
       <SubmitButton
-          :loading="authStore.loading || isSubmitting"
+          :loading="loading"
           text="Iniciar Sesión"
       />
     </form>
@@ -45,148 +38,129 @@
 </template>
 
 <script>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
-import { Mail } from 'lucide-vue-next';
 import FormInput from './FormInput.vue';
 import PasswordInput from './PasswordInput.vue';
 import FormOptions from './FormOptions.vue';
+import AlertMessage from './AlertMessage.vue';
 import SubmitButton from './SubmitButton.vue';
-import { validateEmail } from '../../utils/validators';
+import { Mail } from 'lucide-vue-next';
+import authApi from '../../api/auth.api';
+import { setAuthToken } from '../../api/axios';
 
 export default {
   name: 'LoginForm',
-
   components: {
     FormInput,
     PasswordInput,
     FormOptions,
+    AlertMessage,
     SubmitButton
   },
+  setup() {
+    const router = useRouter();
+    const authStore = useAuthStore();
+    const localError = ref(null);
+    const loading = ref(false);
 
-  data() {
-    return {
-      Mail,
-      formData: {
-        email: '',
-        password: ''
-      },
-      errors: {},
-      rememberMe: false,
-      isSubmitting: false
-    };
-  },
+    const credentials = ref({
+      email: '',
+      password: '',
+      remember: false
+    });
 
-  computed: {
-    authStore() {
-      return useAuthStore();
-    }
-  },
+    const handleLogin = async () => {
+      localError.value = null;
+      loading.value = true;
 
-  methods: {
-    validateForm() {
-      const newErrors = {};
+      try {
+        const response = await authApi.login(credentials.value);
+        const data = response.data;
 
-      const emailError = validateEmail(this.formData.email);
+        if (data.success) {
+          const userData = data.data.user;
+          const userToken = userData.token;
 
-      let passwordError = null;
-      if (!this.formData.password) {
-        passwordError = 'La contraseña es requerida';
-      }
+          const userDataWithoutToken = { ...userData };
+          delete userDataWithoutToken.token;
 
-      if (emailError || passwordError) {
-        newErrors.auth = 'Email o contraseña incorrectos';
+          setAuthToken(userToken);
 
-        if (emailError) newErrors.email = emailError;
-        if (passwordError) newErrors.password = passwordError;
-      }
+          authStore.setUser(userDataWithoutToken);
+          authStore.setToken(userToken);
 
-      Object.assign(this.errors, newErrors);
-
-      return Object.keys(newErrors).length === 0;
-    },
-
-    clearFieldError(field) {
-      if (this.errors[field]) {
-        delete this.errors[field];
-      }
-      if (this.errors.auth) {
-        delete this.errors.auth;
-      }
-    },
-
-    async handleSubmit() {
-      if (this.isSubmitting || this.authStore.loading) return;
-
-      this.isSubmitting = true;
-
-      if (this.validateForm()) {
-        try {
-          const success = await this.authStore.login({
-            ...this.formData,
-            remember: this.rememberMe
-          });
-
-          if (success) {
-            this.$router.push('/dashboard');
+          if (credentials.value.remember) {
+            const expiryTime = new Date().getTime() + 7 * 24 * 60 * 60 * 1000;
+            localStorage.setItem("sessionExpiry", expiryTime.toString());
+          } else {
+            const expiryTime = new Date().getTime() + 60 * 60 * 1000;
+            localStorage.setItem("sessionExpiry", expiryTime.toString());
           }
-        } catch (error) {
-          console.error('Error durante el inicio de sesión:', error);
-        } finally {
-          this.isSubmitting = false;
+
+          router.push({ name: 'dashboard' });
+          return true;
+        } else {
+          localError.value = data.message || 'Error de autenticación';
+          return false;
         }
-      } else {
-        this.isSubmitting = false;
+      } catch (error) {
+        console.error('Error de login:', error);
+
+        if (error.response) {
+          localError.value = error.response.data.message || 'Email o contraseña incorrectos';
+        } else if (error.request) {
+          localError.value = 'No se pudo conectar con el servidor';
+        } else {
+          localError.value = 'Error al intentar iniciar sesión';
+        }
+
+        return false;
+      } finally {
+        loading.value = false;
       }
-    }
+    };
+
+    return {
+      credentials,
+      authStore,
+      localError,
+      loading,
+      handleLogin,
+      Mail
+    };
   }
-};
+}
 </script>
 
 <style scoped>
 .login-form {
-  max-width: 400px;
-  margin: 0 auto;
-  padding: 2.5rem;
+  background-color: white;
   border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-  background-color: #fff;
+  padding: 2.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 420px;
 }
 
-.title {
-  text-align: center;
-  margin-bottom: 2rem;
+.form-title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #333;
+  color: #111827;
+  margin-bottom: 2rem;
+  text-align: center;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .login-form {
     padding: 1.5rem;
-    max-width: 100%;
-    margin: 0 1rem;
+    box-shadow: none;
+  }
+
+  .form-title {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
   }
 }
-
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-}
-
-.alert-danger {
-  background-color: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fee2e2;
-}
-
-.alert-icon {
-  margin-right: 0.5rem;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-}
 </style>
-

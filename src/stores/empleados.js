@@ -1,208 +1,236 @@
-import { defineStore } from "pinia"
-import empleadosApi from "../api/empleados.api"
+import { defineStore } from "pinia";
+import api from "../api/axios";
+import { useNotificationStore } from "./notification";
 
 export const useEmpleadosStore = defineStore("empleados", {
     state: () => ({
         empleados: [],
+        currentEmpleado: null,
         loading: false,
         error: null,
-        currentEmpleado: null,
         filters: {
             search: "",
             activo: null,
             id_departamento: "",
-            id_centro: ""
+            id_centro: "",
         },
         pagination: {
             page: 1,
             limit: 10,
-            totalItems: 0,
-            totalPages: 1
-        }
+            total: 0,
+            totalPages: 1,
+        },
     }),
 
+    getters: {
+        getEmpleados: (state) => state.empleados,
+        getCurrentEmpleado: (state) => state.currentEmpleado,
+        getLoading: (state) => state.loading,
+        getError: (state) => state.error,
+        getFilters: (state) => state.filters,
+        getPagination: (state) => state.pagination,
+    },
+
     actions: {
-        async fetchEmpleados() {
-            this.loading = true
-            this.error = null
+        async fetchEmpleados(params = {}) {
+            this.loading = true;
+            this.error = null;
+            const notificationStore = useNotificationStore();
 
             try {
-                const params = {
+                const mergedParams = {
+                    ...this.filters,
                     page: this.pagination.page,
                     limit: this.pagination.limit,
-                    ...this.filters
-                }
+                    ...params,
+                };
 
-                const response = await empleadosApi.getAll(params)
-                const data = response.data
+                const response = await api.get("/empleados", { params: mergedParams });
+                const data = response.data;
 
                 if (data.success) {
-                    this.empleados = data.data.empleados || []
+                    this.empleados = data.data.empleados || [];
 
-                    const apiPagination = data.data.pagination || {}
+                    const apiPagination = data.data.pagination || {};
                     this.pagination = {
                         page: apiPagination.page || 1,
                         limit: apiPagination.limit || 10,
-                        totalItems: apiPagination.total || 0,
-                        totalPages: apiPagination.totalPages || 1
-                    }
+                        total: apiPagination.total || 0,
+                        totalPages: apiPagination.totalPages || 1,
+                    };
 
-                    console.log('Paginación actualizada:', this.pagination)
-                    return this.empleados
+                    return this.empleados;
                 } else {
-                    throw new Error(data.message || "Error al cargar empleados")
+                    throw new Error(data.message || "Error al cargar empleados");
                 }
             } catch (err) {
-                console.error("Error al cargar empleados:", err)
-                this.error = err.message || "Error al cargar empleados"
-                return []
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar empleados";
+                this.error = errorMsg;
+                notificationStore.error(errorMsg);
+                return [];
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         },
 
         async fetchEmpleadoById(id) {
-            this.loading = true
-            this.error = null
-            this.currentEmpleado = null
+            this.loading = true;
+            this.error = null;
+            this.currentEmpleado = null;
+            const notificationStore = useNotificationStore();
 
             try {
-                const response = await empleadosApi.getById(id)
-                const data = response.data
+                const response = await api.get(`/empleados/${id}`);
+                const data = response.data;
 
                 if (data.success) {
-                    this.currentEmpleado = data.data.empleado
-                    return this.currentEmpleado
+                    this.currentEmpleado = data.data.empleado;
+                    return data.data.empleado;
                 } else {
-                    throw new Error(data.message || "Error al cargar el empleado")
+                    throw new Error(data.message || "Error al cargar el empleado");
                 }
             } catch (err) {
-                console.error("Error al cargar el empleado:", err)
-                this.error = err.message || "Error al cargar el empleado"
-                return null
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar el empleado";
+                this.error = errorMsg;
+                notificationStore.error(errorMsg);
+                return null;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         },
 
         async createEmpleado(empleadoData) {
-            this.loading = true
-            this.error = null
+            this.loading = true;
+            this.error = null;
+            const notificationStore = useNotificationStore();
 
             try {
-                const response = await empleadosApi.create(empleadoData)
-                const data = response.data
+                const response = await api.post("/empleados", empleadoData);
+                const data = response.data;
 
                 if (data.success) {
-                    await this.fetchEmpleados()
-                    return data.data.empleado
+                    notificationStore.success("Empleado creado correctamente");
+                    await this.fetchEmpleados();
+                    return data.data.empleado;
                 } else {
-                    throw new Error(data.message || "Error al crear el empleado")
+                    throw new Error(data.message || "Error al crear el empleado");
                 }
             } catch (err) {
-                console.error("Error al crear el empleado:", err)
-                this.error = err.message || "Error al crear el empleado"
-                throw err
+                const errorMsg = err.response?.data?.message || err.message || "Error al crear el empleado";
+                this.error = errorMsg;
+                notificationStore.error(errorMsg);
+                return null;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         },
 
         async updateEmpleado(id, empleadoData) {
-            this.loading = true
-            this.error = null
+            this.loading = true;
+            this.error = null;
+            const notificationStore = useNotificationStore();
 
             try {
-                const response = await empleadosApi.update(id, empleadoData)
-                const data = response.data
+                const response = await api.put(`/empleados/${id}`, empleadoData);
+                const data = response.data;
 
                 if (data.success) {
-                    this.currentEmpleado = data.data.empleado
+                    notificationStore.success("Empleado actualizado correctamente");
 
-                    const index = this.empleados.findIndex(e => e.id_empleado === Number(id))
-                    if (index !== -1) {
-                        this.empleados[index] = data.data.empleado
+                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === id) {
+                        this.currentEmpleado = data.data.empleado;
                     }
 
-                    return this.currentEmpleado
+                    const index = this.empleados.findIndex(e => e.id_empleado === id);
+                    if (index !== -1) {
+                        this.empleados[index] = data.data.empleado;
+                    }
+
+                    return data.data.empleado;
                 } else {
-                    throw new Error(data.message || "Error al actualizar el empleado")
+                    throw new Error(data.message || "Error al actualizar el empleado");
                 }
             } catch (err) {
-                console.error("Error al actualizar el empleado:", err)
-                this.error = err.message || "Error al actualizar el empleado"
-                return null
+                const errorMsg = err.response?.data?.message || err.message || "Error al actualizar el empleado";
+                this.error = errorMsg;
+                notificationStore.error(errorMsg);
+                return null;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         },
 
         async deleteEmpleado(id) {
-            this.loading = true
-            this.error = null
+            this.loading = true;
+            this.error = null;
+            const notificationStore = useNotificationStore();
 
             try {
-                const response = await empleadosApi.delete(id)
-                const data = response.data
+                const response = await api.delete(`/empleados/${id}`);
+                const data = response.data;
 
                 if (data.success) {
-                    this.empleados = this.empleados.filter(
-                        e => e.id_empleado !== Number(id)
-                    )
+                    notificationStore.success("Empleado eliminado correctamente");
 
-                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === Number(id)) {
-                        this.currentEmpleado = null
+                    this.empleados = this.empleados.filter(e => e.id_empleado !== id);
+
+                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === id) {
+                        this.currentEmpleado = null;
                     }
 
-                    return true
+                    return true;
                 } else {
-                    throw new Error(data.message || "Error al eliminar el empleado")
+                    throw new Error(data.message || "Error al eliminar el empleado");
                 }
             } catch (err) {
-                console.error("Error al eliminar el empleado:", err)
-                this.error = err.message || "Error al eliminar el empleado"
-                return false
+                const errorMsg = err.response?.data?.message || err.message || "Error al eliminar el empleado";
+                this.error = errorMsg;
+                notificationStore.error(errorMsg);
+                return false;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         },
 
         async changeEmpleadoStatus(id, activo) {
-            this.loading = true
-            this.error = null
+            this.loading = true;
+            this.error = null;
+            const notificationStore = useNotificationStore();
 
             try {
-                console.log(`Store: Cambiando estado a ${activo ? 'activo' : 'inactivo'}`)
-                const response = await empleadosApi.changeStatus(id, activo)
-                const data = response.data
+                const response = await api.patch(`/empleados/${id}/status`, { activo });
+                const data = response.data;
 
                 if (data.success) {
-                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === Number(id)) {
-                        this.currentEmpleado.activo = activo
+                    const statusText = activo ? "activado" : "desactivado";
+                    notificationStore.success(`Empleado ${statusText} correctamente`);
+
+                    if (this.currentEmpleado && this.currentEmpleado.id_empleado === id) {
+                        this.currentEmpleado = { ...this.currentEmpleado, activo };
                     }
 
-                    const index = this.empleados.findIndex(e => e.id_empleado === Number(id))
+                    const index = this.empleados.findIndex(e => e.id_empleado === id);
                     if (index !== -1) {
-                        this.empleados[index].activo = activo
+                        this.empleados[index] = { ...this.empleados[index], activo };
                     }
 
-                    return true
+                    return true;
                 } else {
-                    throw new Error(data.message || `Error al ${activo ? 'activar' : 'desactivar'} el empleado`)
+                    throw new Error(data.message || `Error al ${activo ? "activar" : "desactivar"} el empleado`);
                 }
             } catch (err) {
-                console.error("Error al cambiar estado del empleado:", err)
-                this.error = err.message || `Error al ${activo ? 'activar' : 'desactivar'} el empleado`
-                return false
+                const errorMsg = err.response?.data?.message || err.message || `Error al ${activo ? "activar" : "desactivar"} el empleado`;
+                this.error = errorMsg;
+                notificationStore.error(errorMsg);
+                return false;
             } finally {
-                this.loading = false
+                this.loading = false;
             }
         },
 
-        setFilters(filters) {
-            this.filters = { ...filters }
-            this.pagination.page = 1
-            this.fetchEmpleados()
+        updateFilters(newFilters) {
+            this.filters = { ...this.filters, ...newFilters };
+            this.pagination.page = 1;
         },
 
         resetFilters() {
@@ -210,15 +238,13 @@ export const useEmpleadosStore = defineStore("empleados", {
                 search: "",
                 activo: null,
                 id_departamento: "",
-                id_centro: ""
-            }
-            this.pagination.page = 1
-            this.fetchEmpleados()
+                id_centro: "",
+            };
+            this.pagination.page = 1;
         },
 
         setPage(page) {
-            this.pagination.page = page
-            this.fetchEmpleados()
-        }
-    }
-})
+            this.pagination.page = page;
+        },
+    },
+});

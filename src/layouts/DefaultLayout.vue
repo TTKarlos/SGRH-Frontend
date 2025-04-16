@@ -1,193 +1,166 @@
 <template>
-  <div v-if="isAuthenticated" class="app-layout">
-    <aside class="sidebar" :class="{ 'sidebar-open': sidebarOpen }">
-      <div class="sidebar-header">
-        <div class="logo">
-          <svg class="logo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <rect x="3" y="3" width="18" height="18" rx="3" fill="#4361ee" />
-            <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          <span class="logo-text">SGRH</span>
-        </div>
-        <button class="sidebar-close" @click="closeSidebar">
-          <X size="18" />
-        </button>
-      </div>
+  <div class="app-layout">
+    <!-- Mostrar spinner mientras se cargan los permisos -->
+    <loading-spinner
+        v-if="authStore.isAuthenticated && !authStore.permissionsLoaded"
+        message="Cargando permisos de usuario..."
+    />
 
-      <div class="user-profile">
-        <div class="user-avatar">
-          <span class="avatar-text">{{ userInitials }}</span>
-        </div>
-        <div class="user-info">
-          <h3 class="user-name">{{ userName }}</h3>
-          <p class="user-role">{{ userRole }}</p>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <div class="nav-section">
-          <span class="nav-section-title">Principal</span>
-          <router-link to="/dashboard" class="nav-item" @click="closeSidebarOnMobile">
-            <Home class="nav-icon" size="18" />
-            <span class="nav-text">Dashboard</span>
-          </router-link>
-
-          <router-link v-if="hasPermission({nombre: 'Empleados', tipo: 'Lectura'})"
-                       to="/empleados" class="nav-item" @click="closeSidebarOnMobile">
-            <Users class="nav-icon" size="18" />
-            <span class="nav-text">Empleados</span>
-          </router-link>
-        </div>
-
-        <div class="nav-section">
-          <span class="nav-section-title">Gestión</span>
-          <router-link v-if="hasPermission({nombre: 'Contratos', tipo: 'Lectura'})"
-                       to="/contratos" class="nav-item" @click="closeSidebarOnMobile">
-            <FileText class="nav-icon" size="18" />
-            <span class="nav-text">Contratos</span>
-          </router-link>
-
-          <router-link v-if="hasPermission({nombre: 'Documentos', tipo: 'Lectura'})"
-                       to="/documentos" class="nav-item" @click="closeSidebarOnMobile">
-            <FolderOpen class="nav-icon" size="18" />
-            <span class="nav-text">Documentos</span>
-          </router-link>
-
-          <router-link v-if="hasPermission({nombre: 'Ausencias', tipo: 'Lectura'})"
-                       to="/ausencias" class="nav-item" @click="closeSidebarOnMobile">
-            <Calendar class="nav-icon" size="18" />
-            <span class="nav-text">Ausencias</span>
-          </router-link>
-        </div>
-
-        <div class="nav-section">
-          <span class="nav-section-title">Reportes</span>
-          <router-link to="/reportes" class="nav-item" @click="closeSidebarOnMobile">
-            <BarChart class="nav-icon" size="18" />
-            <span class="nav-text">Informes</span>
-          </router-link>
-
-          <router-link to="/estadisticas" class="nav-item" @click="closeSidebarOnMobile">
-            <PieChart class="nav-icon" size="18" />
-            <span class="nav-text">Estadísticas</span>
-          </router-link>
-        </div>
-
-        <div class="nav-section">
-          <span class="nav-section-title">Sistema</span>
-          <router-link v-if="hasPermission({nombre: 'Usuarios', tipo: 'Lectura'})"
-                       to="/usuarios" class="nav-item" @click="closeSidebarOnMobile">
-            <UserCog class="nav-icon" size="18" />
-            <span class="nav-text">Usuarios</span>
-          </router-link>
-
-          <router-link v-if="hasPermission({nombre: 'Roles', tipo: 'Lectura'})"
-                       to="/roles" class="nav-item" @click="closeSidebarOnMobile">
-            <Shield class="nav-icon" size="18" />
-            <span class="nav-text">Roles</span>
-          </router-link>
-
-          <router-link to="/configuracion" class="nav-item" @click="closeSidebarOnMobile">
-            <Settings class="nav-icon" size="18" />
-            <span class="nav-text">Configuración</span>
-          </router-link>
-        </div>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button @click="logout" class="logout-button">
-          <LogOut class="logout-icon" size="18" />
-          <span>Cerrar sesión</span>
-        </button>
-      </div>
-    </aside>
-
-    <div class="main-wrapper">
-      <header class="main-header">
-        <div class="header-left">
-          <button class="menu-toggle" @click="toggleSidebar">
-            <Menu size="20" />
+    <template v-else>
+      <aside class="sidebar" :class="{ 'sidebar-open': sidebarOpen }">
+        <div class="sidebar-header">
+          <div class="logo">
+            <svg class="logo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <rect x="3" y="3" width="18" height="18" rx="3" fill="#4361ee" />
+              <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span class="logo-text">SGRH</span>
+          </div>
+          <button class="sidebar-close" @click="closeSidebar">
+            <X size="18" />
           </button>
-          <div class="breadcrumb">
-            <span class="breadcrumb-item">{{ currentRouteName }}</span>
+        </div>
+
+        <div class="user-profile">
+          <div class="user-avatar">
+            <span class="avatar-text">{{ userInitials }}</span>
+          </div>
+          <div class="user-info">
+            <h3 class="user-name">{{ userName }}</h3>
+            <p class="user-role">{{ userRole }}</p>
           </div>
         </div>
 
-        <div class="header-right">
-          <div class="search-container">
-            <Search size="16" class="search-icon" />
-            <input type="text" placeholder="Buscar..." class="search-input" />
+        <nav class="sidebar-nav">
+          <div class="nav-section">
+            <span class="nav-section-title">Principal</span>
+            <router-link to="/dashboard" class="nav-item" @click="closeSidebarOnMobile">
+              <Home class="nav-icon" size="18" />
+              <span class="nav-text">Dashboard</span>
+            </router-link>
+
+            <router-link
+                v-if="hasPermission({nombre: 'Empleados', tipo: 'Lectura'})"
+                to="/empleados"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <Users class="nav-icon" size="18" />
+              <span class="nav-text">Empleados</span>
+            </router-link>
           </div>
+
+          <!-- Título de categoría condicionado por permisos -->
+          <div class="nav-section" v-if="hasPermission({nombre: 'Usuarios', tipo: 'Lectura'}) ||
+                                      hasPermission({nombre: 'Usuarios', tipo: 'Escritura'})">
+            <span class="nav-section-title">Sistema</span>
+
+            <router-link
+                v-if="hasPermission({nombre: 'Usuarios', tipo: 'Lectura'})"
+                to="/usuarios"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <UserCog class="nav-icon" size="18" />
+              <span class="nav-text">Usuarios</span>
+            </router-link>
+
+            <router-link
+                v-if="hasPermission({nombre: 'Usuarios', tipo: 'Escritura'})"
+                to="/roles"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <Shield class="nav-icon" size="18" />
+              <span class="nav-text">Roles</span>
+            </router-link>
+          </div>
+        </nav>
+
+        <div class="sidebar-footer">
+          <button @click="logout" class="logout-button">
+            <LogOut class="logout-icon" size="18" />
+            <span>Cerrar sesión</span>
+          </button>
         </div>
-      </header>
+      </aside>
 
-      <main class="main-content">
-        <router-view />
-      </main>
-    </div>
+      <div class="main-wrapper">
+        <header class="main-header">
+          <div class="header-left">
+            <button class="menu-toggle" @click="toggleSidebar">
+              <Menu size="20" />
+            </button>
+            <div class="breadcrumb">
+              <span class="breadcrumb-item">{{ currentRouteName }}</span>
+            </div>
+          </div>
 
-    <div v-if="sidebarOpen" class="sidebar-overlay" @click="closeSidebar"></div>
+          <div class="header-right">
+            <div class="search-container">
+              <Search size="16" class="search-icon" />
+              <input type="text" placeholder="Buscar..." class="search-input" />
+            </div>
+          </div>
+        </header>
+
+        <main class="main-content">
+          <slot></slot>
+        </main>
+      </div>
+
+      <div v-if="sidebarOpen" class="sidebar-overlay" @click="closeSidebar"></div>
+    </template>
   </div>
 </template>
 
 <script>
-import { ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import LoadingSpinner from '../components/common/LoadingSpinner.vue';
 import {
   Home,
   Users,
-  FileText,
-  FolderOpen,
-  Calendar,
-  BarChart,
-  PieChart,
   UserCog,
   Shield,
-  Settings,
   LogOut,
   Menu,
   X,
-  Search,
-  Bell
+  Search
 } from 'lucide-vue-next';
 
 export default {
   name: 'DefaultLayout',
   components: {
+    LoadingSpinner,
     Home,
     Users,
-    FileText,
-    FolderOpen,
-    Calendar,
-    BarChart,
-    PieChart,
     UserCog,
     Shield,
-    Settings,
     LogOut,
     Menu,
     X,
-    Search,
-    Bell
+    Search
   },
   setup() {
     const authStore = useAuthStore();
     const route = useRoute();
+    const router = useRouter();
     const sidebarOpen = ref(false);
 
     const currentRouteName = computed(() => {
       const routeNames = {
         dashboard: 'Dashboard',
         empleados: 'Empleados',
-        contratos: 'Contratos',
-        documentos: 'Documentos',
-        ausencias: 'Ausencias',
-        reportes: 'Informes',
-        estadisticas: 'Estadísticas',
+        'empleado-nuevo': 'Nuevo Empleado',
+        'empleado-detalle': 'Detalle de Empleado',
         usuarios: 'Usuarios',
+        'usuario-nuevo': 'Nuevo Usuario',
+        'usuario-detalle': 'Detalle de Usuario',
         roles: 'Roles',
-        configuracion: 'Configuración'
+        unauthorized: 'Acceso Denegado',
+        'not-found': 'Página No Encontrada'
       };
 
       return routeNames[route.name] || 'Dashboard';
@@ -207,13 +180,39 @@ export default {
       }
     };
 
-    const hasPermission = (permiso) => {
-      return authStore.hasPermission(permiso);
-    };
-
     const logout = () => {
       authStore.logout();
+      router.push('/login');
     };
+
+    const hasPermission = (permission) => {
+      if (authStore.isAdmin) {
+        return true;
+      }
+
+      if (permission.tipo === 'Escritura') {
+        return authStore.hasPermission(permission);
+      } else if (permission.tipo === 'Lectura') {
+        return (
+            authStore.hasPermission(permission) ||
+            authStore.hasPermission({ ...permission, tipo: 'Escritura' })
+        );
+      }
+
+      return false;
+    };
+
+    onMounted(async () => {
+      if (authStore.isAuthenticated &&
+          (!authStore.user?.Rol || !authStore.user?.Rol?.Permisos) &&
+          !authStore.isLoadingPermissions) {
+        try {
+          await authStore.loadUserRoleAndPermissions();
+        } catch (error) {
+          authStore.permissionsLoaded = true;
+        }
+      }
+    });
 
     return {
       authStore,
@@ -227,10 +226,6 @@ export default {
     };
   },
   computed: {
-    isAuthenticated() {
-      return this.authStore.isAuthenticated;
-    },
-
     userName() {
       return this.authStore.user && this.authStore.user.nombre ? this.authStore.user.nombre : '';
     },
@@ -250,16 +245,9 @@ export default {
     },
 
     userRole() {
-      if (!this.authStore.user || !this.authStore.user.id_rol) return '';
+      if (!this.authStore.user || !this.authStore.user.Rol) return '';
 
-      const roleMap = {
-        1: 'Administrador',
-        2: 'Gerente',
-        3: 'RRHH',
-        4: 'Usuario'
-      };
-
-      return roleMap[this.authStore.user.id_rol] || '';
+      return this.authStore.user.Rol.nombre || '';
     }
   }
 }
@@ -339,12 +327,6 @@ export default {
   justify-content: center;
   font-weight: 600;
   font-size: 0.875rem;
-}
-
-.user-avatar.small {
-  width: 32px;
-  height: 32px;
-  font-size: 0.75rem;
 }
 
 .user-info {
@@ -536,43 +518,9 @@ export default {
   background-color: #fff;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.action-button {
-  position: relative;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0.25rem;
-}
-
-.notification-badge {
-  position: absolute;
-  top: -5px;
-  right: -5px;
-  width: 16px;
-  height: 16px;
-  border-radius: 9999px;
-  background-color: #ef4444;
-  color: #fff;
-  font-size: 0.625rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.user-menu {
-  cursor: pointer;
-}
-
 .main-content {
   flex: 1;
+  padding: 1.5rem;
   min-width: 0;
 }
 
@@ -630,4 +578,3 @@ export default {
   }
 }
 </style>
-

@@ -7,81 +7,85 @@
       </i>
       <input
           :id="id"
+          :type="showPassword ? 'text' : 'password'"
           :value="modelValue"
           @input="$emit('update:modelValue', $event.target.value)"
-          :type="showPassword ? 'text' : 'password'"
-          class="form-control"
           :placeholder="placeholder"
           :disabled="disabled"
-          v-bind="$attrs"
+          class="form-control"
+          :class="{ 'is-invalid': error }"
       />
       <button
           type="button"
-          class="toggle-password"
+          class="btn-toggle-password"
           @click="togglePasswordVisibility"
-          tabindex="-1"
+          :disabled="disabled"
       >
         <Eye v-if="!showPassword" size="18" />
         <EyeOff v-else size="18" />
       </button>
     </div>
-    <p v-if="error" class="error-message">{{ error }}</p>
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
   </div>
 </template>
 
 <script>
-import { Lock, Eye, EyeOff } from 'lucide-vue-next';
+import { ref } from "vue"
+import { Eye, EyeOff, Lock } from "lucide-vue-next"
 
 export default {
-  name: 'PasswordInput',
+  name: "PasswordInput",
 
   components: {
-    Lock,
     Eye,
-    EyeOff
+    EyeOff,
+    Lock
   },
 
   props: {
     id: {
       type: String,
-      required: true
+      required: true,
     },
     modelValue: {
       type: String,
-      default: ''
+      default: "",
     },
     label: {
       type: String,
-      required: true
+      required: true,
     },
     placeholder: {
       type: String,
-      default: ''
+      default: "Ingresar su contraseña",
     },
     error: {
       type: String,
-      default: ''
+      default: "",
     },
     disabled: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
 
-  emits: ['update:modelValue', 'input'],
+  emits: ["update:modelValue", "input"],
 
-  data() {
+  setup() {
+    const showPassword = ref(false)
+
+    const togglePasswordVisibility = () => {
+      showPassword.value = !showPassword.value
+    }
+
     return {
-      showPassword: false
-    };
-  },
-
-  methods: {
-    togglePasswordVisibility() {
-      this.showPassword = !this.showPassword;
+      showPassword,
+      togglePasswordVisibility,
     }
-  }
-};
+  },
+}
 </script>
 
 <style scoped>
@@ -109,6 +113,7 @@ export default {
   color: #9ca3af;
   display: flex;
   align-items: center;
+  z-index: 2;
 }
 
 .form-control {
@@ -119,22 +124,42 @@ export default {
   font-size: 1rem;
   transition: all 0.2s ease;
   background-color: #f9fafb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #4361ee;
+  border-color: #dc2626;
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
-.has-error .form-control {
+.form-control.is-invalid {
   border-color: #ef4444;
   background-color: #fef2f2;
 }
 
-.has-error .form-control:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+.btn-toggle-password {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.btn-toggle-password:hover {
+  color: #4b5563;
+  background-color: #f3f4f6;
 }
 
 .error-message {
@@ -145,20 +170,12 @@ export default {
   align-items: center;
 }
 
-.toggle-password {
-  position: absolute;
-  right: 12px;
-  background: none;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  padding: 0;
+.has-error .form-control {
+  border-color: #ef4444;
+  background-color: #fef2f2;
 }
 
-.toggle-password:hover {
-  color: #4b5563;
+.has-error .form-control:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 </style>
-

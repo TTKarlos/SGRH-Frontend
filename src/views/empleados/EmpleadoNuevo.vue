@@ -1,258 +1,260 @@
 <template>
-  <div class="empleado-nuevo">
-    <div class="page-header">
-      <div class="header-left">
-        <button @click="goBack" class="btn btn-icon btn-ghost">
-          <ArrowLeft size="18" />
-          <span>Volver</span>
-        </button>
-        <h1>Nuevo Empleado</h1>
-      </div>
-
-      <div class="header-actions">
-        <button @click="saveEmpleado" class="btn btn-success">
-          <Save size="18" class="btn-icon" />
-          Guardar
-        </button>
-
-        <button @click="goBack" class="btn btn-secondary">
-          <X size="18" class="btn-icon" />
-          Cancelar
-        </button>
-      </div>
-    </div>
-
-    <div v-if="empleadosStore.loading" class="loading-container">
-      <LoadingSpinner message="Guardando empleado..." />
-    </div>
-
-    <div v-else class="empleado-content">
-      <div class="tabs">
-        <button
-            class="tab-button"
-            :class="{ active: activeTab === 'personal' }"
-            @click="activeTab = 'personal'"
-        >
-          <User size="18" class="tab-icon" />
-          Datos Personales
-        </button>
-        <button
-            class="tab-button"
-            :class="{ active: activeTab === 'laboral' }"
-            @click="activeTab = 'laboral'"
-        >
-          <Briefcase size="18" class="tab-icon" />
-          Información Laboral
-        </button>
-      </div>
-
-      <div class="tab-content">
-        <!-- Datos Personales -->
-        <div v-if="activeTab === 'personal'" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h2>Datos Personales</h2>
-            </div>
-            <div class="card-body">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Nombre <span class="required">*</span></label>
-                  <input
-                      v-model="empleado.nombre"
-                      type="text"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.nombre }"
-                  />
-                  <div v-if="validationErrors.nombre" class="invalid-feedback">
-                    {{ validationErrors.nombre }}
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Apellidos <span class="required">*</span></label>
-                  <input
-                      v-model="empleado.apellidos"
-                      type="text"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.apellidos }"
-                  />
-                  <div v-if="validationErrors.apellidos" class="invalid-feedback">
-                    {{ validationErrors.apellidos }}
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>DNI/NIE <span class="required">*</span></label>
-                  <input
-                      v-model="empleado.dni_nie"
-                      type="text"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.dni_nie }"
-                  />
-                  <div v-if="validationErrors.dni_nie" class="invalid-feedback">
-                    {{ validationErrors.dni_nie }}
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Fecha de Nacimiento <span class="required">*</span></label>
-                  <input
-                      v-model="empleado.fecha_nacimiento"
-                      type="date"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.fecha_nacimiento }"
-                  />
-                  <div v-if="validationErrors.fecha_nacimiento" class="invalid-feedback">
-                    {{ validationErrors.fecha_nacimiento }}
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Estado Civil</label>
-                  <select
-                      v-model="empleado.estado_civil"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.estado_civil }"
-                  >
-                    <option value="">Seleccionar...</option>
-                    <option value="Soltero/a">Soltero/a</option>
-                    <option value="Casado/a">Casado/a</option>
-                    <option value="Divorciado/a">Divorciado/a</option>
-                    <option value="Viudo/a">Viudo/a</option>
-                    <option value="Otro">Otro</option>
-                  </select>
-                  <div v-if="validationErrors.estado_civil" class="invalid-feedback">
-                    {{ validationErrors.estado_civil }}
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Dirección</label>
-                  <textarea
-                      v-model="empleado.direccion"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.direccion }"
-                  ></textarea>
-                  <div v-if="validationErrors.direccion" class="invalid-feedback">
-                    {{ validationErrors.direccion }}
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Teléfono</label>
-                  <input
-                      v-model="empleado.telefono"
-                      type="tel"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.telefono }"
-                  />
-                  <div v-if="validationErrors.telefono" class="invalid-feedback">
-                    {{ validationErrors.telefono }}
-                  </div>
-                </div>
-
-                <div class="form-group">
-                  <label>Email</label>
-                  <input
-                      v-model="empleado.email"
-                      type="email"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.email }"
-                  />
-                  <div v-if="validationErrors.email" class="invalid-feedback">
-                    {{ validationErrors.email }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+  <DefaultLayout>
+    <div class="empleado-nuevo">
+      <div class="page-header">
+        <div class="header-left">
+          <button @click="goBack" class="btn btn-icon btn-ghost">
+            <ArrowLeft size="18" />
+            <span>Volver</span>
+          </button>
+          <h1>Nuevo Empleado</h1>
         </div>
 
-        <!-- Información Laboral -->
-        <div v-if="activeTab === 'laboral'" class="tab-panel">
-          <div class="card">
-            <div class="card-header">
-              <h2>Información Laboral</h2>
-            </div>
-            <div class="card-body">
-              <div class="form-grid">
-                <div class="form-group">
-                  <label>Puesto Actual <span class="required">*</span></label>
-                  <input
-                      v-model="empleado.puesto_actual"
-                      type="text"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.puesto_actual }"
-                  />
-                  <div v-if="validationErrors.puesto_actual" class="invalid-feedback">
-                    {{ validationErrors.puesto_actual }}
-                  </div>
-                </div>
+        <div class="header-actions">
+          <button @click="saveEmpleado" class="btn btn-success">
+            <Save size="18" class="btn-icon" />
+            Guardar
+          </button>
 
-                <div class="form-group">
-                  <label>Centro</label>
-                  <select
-                      v-model="empleado.id_centro"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.id_centro }"
-                      @change="handleCentroChange"
-                  >
-                    <option :value="null">Sin centro</option>
-                    <option v-for="centro in centrosStore.centros"
-                            :key="centro.id_centro"
-                            :value="centro.id_centro">
-                      {{ centro.nombre }}
-                    </option>
-                  </select>
-                  <div v-if="validationErrors.id_centro" class="invalid-feedback">
-                    {{ validationErrors.id_centro }}
-                  </div>
-                </div>
+          <button @click="goBack" class="btn btn-secondary">
+            <X size="18" class="btn-icon" />
+            Cancelar
+          </button>
+        </div>
+      </div>
 
-                <div class="form-group">
-                  <label>Departamento</label>
-                  <select
-                      v-model="empleado.id_departamento"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.id_departamento }"
-                  >
-                    <option :value="null">Sin departamento</option>
-                    <option v-for="departamento in departamentosFiltrados"
-                            :key="departamento.id_departamento"
-                            :value="departamento.id_departamento">
-                      {{ departamento.nombre }}
-                    </option>
-                  </select>
-                  <div v-if="validationErrors.id_departamento" class="invalid-feedback">
-                    {{ validationErrors.id_departamento }}
-                  </div>
-                </div>
+      <div v-if="empleadosStore.loading" class="loading-container">
+        <LoadingSpinner message="Guardando empleado..." />
+      </div>
 
-                <div class="form-group">
-                  <label>Fecha de Incorporación <span class="required">*</span></label>
-                  <input
-                      v-model="empleado.fecha_incorporacion"
-                      type="date"
-                      class="form-control"
-                      :class="{ 'is-invalid': validationErrors.fecha_incorporacion }"
-                  />
-                  <div v-if="validationErrors.fecha_incorporacion" class="invalid-feedback">
-                    {{ validationErrors.fecha_incorporacion }}
-                  </div>
-                </div>
+      <div v-else class="empleado-content">
+        <div class="tabs">
+          <button
+              class="tab-button"
+              :class="{ active: activeTab === 'personal' }"
+              @click="activeTab = 'personal'"
+          >
+            <User size="18" class="tab-icon" />
+            Datos Personales
+          </button>
+          <button
+              class="tab-button"
+              :class="{ active: activeTab === 'laboral' }"
+              @click="activeTab = 'laboral'"
+          >
+            <Briefcase size="18" class="tab-icon" />
+            Información Laboral
+          </button>
+        </div>
 
-                <div class="form-group">
-                  <label>Estado</label>
-                  <div class="toggle-switch">
+        <div class="tab-content">
+          <!-- Datos Personales -->
+          <div v-if="activeTab === 'personal'" class="tab-panel">
+            <div class="card">
+              <div class="card-header">
+                <h2>Datos Personales</h2>
+              </div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Nombre <span class="required">*</span></label>
                     <input
-                        type="checkbox"
-                        id="estado-switch"
-                        v-model="empleado.activo"
+                        v-model="empleado.nombre"
+                        type="text"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.nombre }"
                     />
-                    <label for="estado-switch" class="toggle-label">
-                      <span class="toggle-inner"></span>
-                      <span class="toggle-switch-label">{{ empleado.activo ? 'Activo' : 'Inactivo' }}</span>
-                    </label>
+                    <div v-if="validationErrors.nombre" class="invalid-feedback">
+                      {{ validationErrors.nombre }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Apellidos <span class="required">*</span></label>
+                    <input
+                        v-model="empleado.apellidos"
+                        type="text"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.apellidos }"
+                    />
+                    <div v-if="validationErrors.apellidos" class="invalid-feedback">
+                      {{ validationErrors.apellidos }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>DNI/NIE <span class="required">*</span></label>
+                    <input
+                        v-model="empleado.dni_nie"
+                        type="text"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.dni_nie }"
+                    />
+                    <div v-if="validationErrors.dni_nie" class="invalid-feedback">
+                      {{ validationErrors.dni_nie }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Fecha de Nacimiento <span class="required">*</span></label>
+                    <input
+                        v-model="empleado.fecha_nacimiento"
+                        type="date"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.fecha_nacimiento }"
+                    />
+                    <div v-if="validationErrors.fecha_nacimiento" class="invalid-feedback">
+                      {{ validationErrors.fecha_nacimiento }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Estado Civil</label>
+                    <select
+                        v-model="empleado.estado_civil"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.estado_civil }"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option value="Soltero/a">Soltero/a</option>
+                      <option value="Casado/a">Casado/a</option>
+                      <option value="Divorciado/a">Divorciado/a</option>
+                      <option value="Viudo/a">Viudo/a</option>
+                      <option value="Otro">Otro</option>
+                    </select>
+                    <div v-if="validationErrors.estado_civil" class="invalid-feedback">
+                      {{ validationErrors.estado_civil }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Dirección</label>
+                    <textarea
+                        v-model="empleado.direccion"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.direccion }"
+                    ></textarea>
+                    <div v-if="validationErrors.direccion" class="invalid-feedback">
+                      {{ validationErrors.direccion }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Teléfono</label>
+                    <input
+                        v-model="empleado.telefono"
+                        type="tel"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.telefono }"
+                    />
+                    <div v-if="validationErrors.telefono" class="invalid-feedback">
+                      {{ validationErrors.telefono }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Email</label>
+                    <input
+                        v-model="empleado.email"
+                        type="email"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.email }"
+                    />
+                    <div v-if="validationErrors.email" class="invalid-feedback">
+                      {{ validationErrors.email }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Información Laboral -->
+          <div v-if="activeTab === 'laboral'" class="tab-panel">
+            <div class="card">
+              <div class="card-header">
+                <h2>Información Laboral</h2>
+              </div>
+              <div class="card-body">
+                <div class="form-grid">
+                  <div class="form-group">
+                    <label>Puesto Actual <span class="required">*</span></label>
+                    <input
+                        v-model="empleado.puesto_actual"
+                        type="text"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.puesto_actual }"
+                    />
+                    <div v-if="validationErrors.puesto_actual" class="invalid-feedback">
+                      {{ validationErrors.puesto_actual }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Centro</label>
+                    <select
+                        v-model="empleado.id_centro"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.id_centro }"
+                        @change="handleCentroChange"
+                    >
+                      <option :value="null">Sin centro</option>
+                      <option v-for="centro in centrosStore.centros"
+                              :key="centro.id_centro"
+                              :value="centro.id_centro">
+                        {{ centro.nombre }}
+                      </option>
+                    </select>
+                    <div v-if="validationErrors.id_centro" class="invalid-feedback">
+                      {{ validationErrors.id_centro }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Departamento</label>
+                    <select
+                        v-model="empleado.id_departamento"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.id_departamento }"
+                    >
+                      <option :value="null">Sin departamento</option>
+                      <option v-for="departamento in departamentosFiltrados"
+                              :key="departamento.id_departamento"
+                              :value="departamento.id_departamento">
+                        {{ departamento.nombre }}
+                      </option>
+                    </select>
+                    <div v-if="validationErrors.id_departamento" class="invalid-feedback">
+                      {{ validationErrors.id_departamento }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Fecha de Incorporación <span class="required">*</span></label>
+                    <input
+                        v-model="empleado.fecha_incorporacion"
+                        type="date"
+                        class="form-control"
+                        :class="{ 'is-invalid': validationErrors.fecha_incorporacion }"
+                    />
+                    <div v-if="validationErrors.fecha_incorporacion" class="invalid-feedback">
+                      {{ validationErrors.fecha_incorporacion }}
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Estado</label>
+                    <div class="toggle-switch">
+                      <input
+                          type="checkbox"
+                          id="estado-switch"
+                          v-model="empleado.activo"
+                      />
+                      <label for="estado-switch" class="toggle-label">
+                        <span class="toggle-inner"></span>
+                        <span class="toggle-switch-label">{{ empleado.activo ? 'Activo' : 'Inactivo' }}</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -261,16 +263,18 @@
         </div>
       </div>
     </div>
-  </div>
+  </DefaultLayout>
 </template>
 
 <script>
 import { ref, computed } from "vue"
+import { useRouter } from "vue-router"
 import { useEmpleadosStore } from "../../stores/empleados"
 import { useNotificationStore } from "../../stores/notification"
 import { useDepartamentosStore } from "../../stores/departamentos"
 import { useCentrosStore } from "../../stores/centros"
 import { validateEmpleado } from "../../validation/empleadoSchema"
+import DefaultLayout from "../../layouts/DefaultLayout.vue"
 import LoadingSpinner from "../../components/common/LoadingSpinner.vue"
 import {
   User,
@@ -284,6 +288,7 @@ export default {
   name: "EmpleadoNuevo",
 
   components: {
+    DefaultLayout,
     LoadingSpinner,
     User,
     Briefcase,
@@ -293,6 +298,7 @@ export default {
   },
 
   setup() {
+    const router = useRouter()
     const empleadosStore = useEmpleadosStore()
     const notificationStore = useNotificationStore()
     const departamentosStore = useDepartamentosStore()
@@ -335,7 +341,8 @@ export default {
       validationErrors,
       empleado,
       selectedCentroId,
-      departamentosFiltrados
+      departamentosFiltrados,
+      router
     }
   },
 
@@ -364,7 +371,7 @@ export default {
     },
 
     goBack() {
-      this.$router.push("/empleados")
+      this.router.push("/empleados")
     },
 
     async saveEmpleado() {
@@ -404,7 +411,7 @@ export default {
               "Empleado creado"
           )
 
-          this.$router.push(`/empleados/${nuevoEmpleado.id_empleado}`)
+          this.router.push(`/empleados/${nuevoEmpleado.id_empleado}`)
         }
       } catch (error) {
         console.error("Error al crear empleado:", error)

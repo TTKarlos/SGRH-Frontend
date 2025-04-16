@@ -88,6 +88,7 @@ export default {
   color: #9ca3af;
   display: flex;
   align-items: center;
+  z-index: 2;
 }
 
 .form-control {
@@ -98,13 +99,14 @@ export default {
   font-size: 1rem;
   transition: all 0.2s ease;
   background-color: #f9fafb;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .form-control:focus {
   outline: none;
-  border-color: #4361ee;
+  border-color: #dc2626;
   background-color: #fff;
-  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .has-error .form-control {
@@ -124,4 +126,3 @@ export default {
   align-items: center;
 }
 </style>
-

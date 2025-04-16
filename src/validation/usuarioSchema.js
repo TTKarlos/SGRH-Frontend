@@ -105,7 +105,6 @@ export const changeStatusSchema = yup.object().shape({
         .required("El estado (activo) es requerido"),
 });
 
-// Función para validar un usuario con el esquema de creación
 export const validateCreateUser = async (userData) => {
     try {
         const validatedData = await createUserSchema.validate(userData, { abortEarly: false });
@@ -121,7 +120,6 @@ export const validateCreateUser = async (userData) => {
     }
 };
 
-// Función para validar un usuario con el esquema de actualización
 export const validateUpdateUser = async (userData) => {
     try {
         const validatedData = await updateUserSchema.validate(userData, { abortEarly: false });
@@ -137,7 +135,6 @@ export const validateUpdateUser = async (userData) => {
     }
 };
 
-// Función para validar cambio de contraseña
 export const validateChangePassword = async (passwordData) => {
     try {
         const validatedData = await changePasswordSchema.validate(passwordData, { abortEarly: false });
@@ -153,7 +150,6 @@ export const validateChangePassword = async (passwordData) => {
     }
 };
 
-// Función para validar reseteo de contraseña
 export const validateResetPassword = async (passwordData) => {
     try {
         const validatedData = await resetPasswordSchema.validate(passwordData, { abortEarly: false });

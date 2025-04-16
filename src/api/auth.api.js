@@ -1,16 +1,21 @@
-import api from "./axios"
+import api from "./axios";
 
-export default {
+const authApi = {
     login(credentials) {
-        return api.post("/auth/login", credentials)
+        return api.post("/auth/login", credentials);
     },
 
     logout() {
-        return api.post("/auth/logout")
+        return api.post("/auth/logout");
     },
 
     getProfile() {
-        return api.get("/auth/profile")
+        return api.get("/auth/profile");
     },
-}
 
+    changePassword(data) {
+        return api.post("/auth/change-password", data);
+    }
+};
+
+export default authApi;

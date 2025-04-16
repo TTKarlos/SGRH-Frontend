@@ -119,11 +119,7 @@ export default {
       ];
     }
   },
-  mounted() {
-    console.log('Paginación montada con datos:', this.pagination);
-    console.log('shouldShowPagination:', this.shouldShowPagination);
-    console.log('safeTotalPages:', this.safeTotalPages);
-  },
+
   emits: ['change-page']
 }
 </script>

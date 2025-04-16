@@ -1,197 +1,182 @@
 <template>
-  <div class="usuario-nuevo-page">
-    <div class="page-header">
-      <div class="header-left">
-        <button @click="goBack" class="btn-back">
-          <ArrowLeft size="20" />
-          <span>Volver</span>
-        </button>
-        <h1>Nuevo Usuario</h1>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <h2>Información del Usuario</h2>
-        <p>Completa el formulario para crear un nuevo usuario en el sistema.</p>
+  <DefaultLayout>
+    <div class="usuario-nuevo-page">
+      <div class="page-header">
+        <div class="header-left">
+          <button @click="goBack" class="btn-back">
+            <ArrowLeft size="20" />
+            <span>Volver</span>
+          </button>
+          <h1>Nuevo Usuario</h1>
+        </div>
       </div>
 
-      <div class="card-body">
-        <form @submit.prevent="guardarUsuario" class="form">
-          <div class="form-section">
-            <h3>Datos personales</h3>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="nombre">Nombre *</label>
-                <input
-                    id="nombre"
-                    v-model="usuario.nombre"
-                    type="text"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.nombre }"
-                    placeholder="Nombre del usuario"
-                    required
-                />
-                <div v-if="errors.nombre" class="invalid-feedback">
-                  {{ errors.nombre }}
-                </div>
-              </div>
+      <div class="card">
+        <div class="card-header">
+          <h2>Información del Usuario</h2>
+          <p>Completa el formulario para crear un nuevo usuario en el sistema.</p>
+        </div>
 
-              <div class="form-group">
-                <label for="apellidos">Apellidos *</label>
-                <input
-                    id="apellidos"
-                    v-model="usuario.apellidos"
-                    type="text"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.apellidos }"
-                    placeholder="Apellidos del usuario"
-                    required
-                />
-                <div v-if="errors.apellidos" class="invalid-feedback">
-                  {{ errors.apellidos }}
-                </div>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="email">Email *</label>
-                <input
-                    id="email"
-                    v-model="usuario.email"
-                    type="email"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.email }"
-                    placeholder="correo@ejemplo.com"
-                    required
-                />
-                <div v-if="errors.email" class="invalid-feedback">
-                  {{ errors.email }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3>Datos de la cuenta</h3>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="nombre_usuario">Nombre de usuario *</label>
-                <input
-                    id="nombre_usuario"
-                    v-model="usuario.nombre_usuario"
-                    type="text"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.nombre_usuario }"
-                    placeholder="nombre.usuario"
-                    required
-                />
-                <div v-if="errors.nombre_usuario" class="invalid-feedback">
-                  {{ errors.nombre_usuario }}
-                </div>
-                <small class="form-text text-muted">
-                  Solo puede contener letras, números, puntos, guiones y guiones bajos.
-                </small>
-              </div>
-
-              <div class="form-group">
-                <label for="password_hash">Contraseña *</label>
-                <div class="password-input-group">
+        <div class="card-body">
+          <form @submit.prevent="guardarUsuario" class="form">
+            <div class="form-section">
+              <h3>Datos personales</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="nombre">Nombre *</label>
                   <input
-                      id="password_hash"
-                      v-model="usuario.password_hash"
-                      :type="showPassword ? 'text' : 'password'"
+                      id="nombre"
+                      v-model="usuario.nombre"
+                      type="text"
                       class="form-control"
-                      :class="{ 'is-invalid': errors.password_hash }"
-                      placeholder="Contraseña"
+                      :class="{ 'is-invalid': errors.nombre }"
+                      placeholder="Nombre del usuario"
                       required
                   />
-                  <button
-                      type="button"
-                      class="password-toggle"
-                      @click="showPassword = !showPassword"
+                  <div v-if="errors.nombre" class="invalid-feedback">
+                    {{ errors.nombre }}
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label for="apellidos">Apellidos *</label>
+                  <input
+                      id="apellidos"
+                      v-model="usuario.apellidos"
+                      type="text"
+                      class="form-control"
+                      :class="{ 'is-invalid': errors.apellidos }"
+                      placeholder="Apellidos del usuario"
+                      required
+                  />
+                  <div v-if="errors.apellidos" class="invalid-feedback">
+                    {{ errors.apellidos }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="email">Email *</label>
+                  <input
+                      id="email"
+                      v-model="usuario.email"
+                      type="email"
+                      class="form-control"
+                      :class="{ 'is-invalid': errors.email }"
+                      placeholder="correo@ejemplo.com"
+                      required
+                  />
+                  <div v-if="errors.email" class="invalid-feedback">
+                    {{ errors.email }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h3>Datos de la cuenta</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="nombre_usuario">Nombre de usuario *</label>
+                  <input
+                      id="nombre_usuario"
+                      v-model="usuario.nombre_usuario"
+                      type="text"
+                      class="form-control"
+                      :class="{ 'is-invalid': errors.nombre_usuario }"
+                      placeholder="nombre.usuario"
+                      required
+                  />
+                  <div v-if="errors.nombre_usuario" class="invalid-feedback">
+                    {{ errors.nombre_usuario }}
+                  </div>
+                  <small class="form-text text-muted">
+                    Solo puede contener letras, números, puntos, guiones y guiones bajos.
+                  </small>
+                </div>
+
+                <div class="form-group">
+                  <label for="password_hash">Contraseña *</label>
+                  <PasswordInput
+                      id="password_hash"
+                      v-model="usuario.password_hash"
+                      label=""
+                      placeholder="Contraseña"
+                      :error="errors.password_hash"
+                      helpText="Debe tener al menos 8 caracteres."
+                      required
+                  />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="id_rol">Rol *</label>
+                  <select
+                      id="id_rol"
+                      v-model="usuario.id_rol"
+                      class="form-control"
+                      :class="{ 'is-invalid': errors.id_rol }"
+                      required
                   >
-                    <Eye v-if="!showPassword" size="16" />
-                    <EyeOff v-else size="16" />
-                  </button>
+                    <option value="">Selecciona un rol</option>
+                    <option v-for="rol in roles" :key="rol.id_rol" :value="rol.id_rol">
+                      {{ rol.nombre }}
+                    </option>
+                    <template v-if="roles.length === 0">
+                      <option value="1">Administrador</option>
+                      <option value="2">Gerente</option>
+                      <option value="3">RRHH</option>
+                      <option value="4">Usuario</option>
+                    </template>
+                  </select>
+                  <div v-if="errors.id_rol" class="invalid-feedback">
+                    {{ errors.id_rol }}
+                  </div>
                 </div>
-                <div v-if="errors.password_hash" class="invalid-feedback">
-                  {{ errors.password_hash }}
+
+                <div class="form-group">
+                  <label for="activo">Estado</label>
+                  <div class="toggle-container">
+                    <label class="toggle">
+                      <input
+                          id="activo"
+                          v-model="usuario.activo"
+                          type="checkbox"
+                      />
+                      <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">{{ usuario.activo ? 'Activo' : 'Inactivo' }}</span>
+                  </div>
                 </div>
-                <small class="form-text text-muted">
-                  Debe tener al menos 8 caracteres.
-                </small>
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="id_rol">Rol *</label>
-                <select
-                    id="id_rol"
-                    v-model="usuario.id_rol"
-                    class="form-control"
-                    :class="{ 'is-invalid': errors.id_rol }"
-                    required
-                >
-                  <option value="">Selecciona un rol</option>
-                  <option v-for="rol in roles" :key="rol.id_rol" :value="rol.id_rol">
-                    {{ rol.nombre }}
-                  </option>
-                  <!-- Fallback options si los roles no se han cargado -->
-                  <template v-if="roles.length === 0">
-                    <option value="1">Administrador</option>
-                    <option value="2">Gerente</option>
-                    <option value="3">RRHH</option>
-                    <option value="4">Usuario</option>
-                  </template>
-                </select>
-                <div v-if="errors.id_rol" class="invalid-feedback">
-                  {{ errors.id_rol }}
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="activo">Estado</label>
-                <div class="toggle-container">
-                  <label class="toggle">
-                    <input
-                        id="activo"
-                        v-model="usuario.activo"
-                        type="checkbox"
-                    />
-                    <span class="toggle-slider"></span>
-                  </label>
-                  <span class="toggle-label">{{ usuario.activo ? 'Activo' : 'Inactivo' }}</span>
-                </div>
-              </div>
+            <div class="form-actions">
+              <button
+                  type="button"
+                  @click="goBack"
+                  class="btn btn-outline-secondary"
+                  :disabled="loading"
+              >
+                Cancelar
+              </button>
+              <button
+                  type="submit"
+                  class="btn btn-primary"
+                  :disabled="loading"
+              >
+                <Loader v-if="loading" size="16" class="btn-icon spinner" />
+                <Save v-else size="16" class="btn-icon" />
+                Guardar Usuario
+              </button>
             </div>
-          </div>
-
-          <div class="form-actions">
-            <button
-                type="button"
-                @click="goBack"
-                class="btn btn-outline-secondary"
-                :disabled="loading"
-            >
-              Cancelar
-            </button>
-            <button
-                type="submit"
-                class="btn btn-primary"
-                :disabled="loading"
-            >
-              <Loader v-if="loading" size="16" class="btn-icon spinner" />
-              <Save v-else size="16" class="btn-icon" />
-              Guardar Usuario
-            </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
-  </div>
+  </DefaultLayout>
 </template>
 
 <script>
@@ -202,6 +187,8 @@ import { useRolesStore } from '../../stores/roles';
 import { useNotificationStore } from '../../stores/notification';
 import { validateCreateUser } from '../../validation/usuarioSchema';
 import { storeToRefs } from 'pinia';
+import DefaultLayout from '../../layouts/DefaultLayout.vue';
+import PasswordInput from '../../components/auth/PasswordInput.vue';
 import {
   ArrowLeft,
   Save,
@@ -213,6 +200,8 @@ import {
 export default {
   name: 'UsuarioNuevo',
   components: {
+    DefaultLayout,
+    PasswordInput,
     ArrowLeft,
     Save,
     Loader,
@@ -454,22 +443,6 @@ export default {
 .form-text {
   font-size: 0.75rem;
   color: #6b7280;
-}
-
-.password-input-group {
-  position: relative;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 0;
 }
 
 .toggle-container {

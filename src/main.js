@@ -1,46 +1,21 @@
-import { createApp } from "vue"
-import { createPinia } from "pinia"
-import App from "./App.vue"
-import router from "./router"
-import "./assets/css/main.css"
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import App from './App.vue'
+import router from './router'
+import { setupPermissionGuard } from './router/guards/permissionGuard'
+import { vPermission } from './directives/permission'
+import './assets/main.css'
+
+const pinia = createPinia()
 
 const app = createApp(App)
 
-app.use(createPinia())
+app.use(pinia)
+
+setupPermissionGuard(router)
 
 app.use(router)
 
-import { useAuthStore } from "./stores/auth"
-import { useNotificationStore } from "./stores/notification"
+app.directive('permission', vPermission)
 
-const pinia = createPinia()
-const authStore = useAuthStore(pinia)
-const notificationStore = useNotificationStore(pinia)
-
-window.addEventListener("beforeunload", (event) => {
-    if (authStore.isAuthenticated) {
-        event.preventDefault()
-    }
-})
-
-app.directive("permission", {
-    mounted(el, binding) {
-        const { value } = binding
-
-        if (!value || !value.nombre || !value.tipo) {
-            console.warn("v-permission requiere un objeto con nombre y tipo")
-            return
-        }
-
-        if (authStore.isAdmin) {
-            return
-        }
-
-        if (!authStore.hasPermission(value)) {
-            el.style.display = "none"
-        }
-    },
-})
-
-app.mount("#app")
-
+app.mount('#app')

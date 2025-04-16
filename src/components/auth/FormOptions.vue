@@ -4,28 +4,28 @@
       <input
           type="checkbox"
           id="remember"
-          :checked="remember"
+          :checked="modelValue"
           @change="$emit('update:remember', $event.target.checked)"
       />
       <label for="remember">Recordarme</label>
     </div>
-    <a href="#" class="forgot-password">¿Olvidó su contraseña?</a>
+    <div class="forgot-password">
+      <router-link to="/forgot-password">¿Olvidaste tu contraseña?</router-link>
+    </div>
   </div>
 </template>
 
 <script>
 export default {
   name: 'FormOptions',
-
   props: {
-    remember: {
+    modelValue: {
       type: Boolean,
       default: false
     }
   },
-
   emits: ['update:remember']
-};
+}
 </script>
 
 <style scoped>
@@ -44,31 +44,16 @@ export default {
 
 .remember-me input[type="checkbox"] {
   margin-right: 0.5rem;
-  cursor: pointer;
 }
 
-.remember-me label {
-  cursor: pointer;
-  color: #4b5563;
-}
-
-.forgot-password {
-  color: #4361ee;
+.forgot-password a {
+  color: #dc2626;
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: color 0.2s;
 }
 
-.forgot-password:hover {
-  color: #3a56d4;
+.forgot-password a:hover {
+  color: #b91c1c;
   text-decoration: underline;
 }
-
-@media (max-width: 480px) {
-  .form-options {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-}
 </style>
-

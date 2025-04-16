@@ -1,35 +1,38 @@
 <template>
-  <div class="usuarios-page">
-    <UsuariosHeader @nuevo-usuario="crearNuevoUsuario" />
+  <DefaultLayout>
+    <div class="usuarios-page">
+      <UsuariosHeader @nuevo-usuario="crearNuevoUsuario" />
 
-    <div class="card">
-      <UsuariosFiltros
-          v-model:search="searchQuery"
-          v-model:filters="filters"
-          @search="handleSearch"
-          @apply-filters="applyFilters"
-          @reset-filters="resetFilters"
-      />
+      <div class="card">
+        <UsuariosFiltros
+            v-model:search="searchQuery"
+            v-model:filters="filters"
+            @search="handleSearch"
+            @apply-filters="applyFilters"
+            @reset-filters="resetFilters"
+        />
 
-      <UsuariosTabla
-          :loading="usuariosStore.loading"
-          :error="usuariosStore.error"
-          :usuarios="usuariosStore.usuarios"
-          :filters="filters"
-          @retry="loadUsuarios"
-          @reset-filters="resetFilters"
-          @view-usuario="goToUsuarioDetalle"
-      />
+        <UsuariosTabla
+            :loading="usuariosStore.loading"
+            :error="usuariosStore.error"
+            :usuarios="usuariosStore.usuarios"
+            :filters="filters"
+            @retry="loadUsuarios"
+            @reset-filters="resetFilters"
+            @view-usuario="goToUsuarioDetalle"
+        />
 
-      <UsuariosPaginacion
-          :pagination="usuariosStore.pagination"
-          @change-page="changePage"
-      />
+        <UsuariosPaginacion
+            :pagination="usuariosStore.pagination"
+            @change-page="changePage"
+        />
+      </div>
     </div>
-  </div>
+  </DefaultLayout>
 </template>
 
 <script>
+import DefaultLayout from '../../layouts/DefaultLayout.vue';
 import { useUsuariosStore } from '../../stores/usuarios';
 import { useNotificationStore } from '../../stores/notification';
 import UsuariosHeader from '../../components/usuarios/UsuariosHeader.vue';
@@ -40,6 +43,7 @@ import UsuariosPaginacion from '../../components/usuarios/UsuariosPaginacion.vue
 export default {
   name: 'Usuarios',
   components: {
+    DefaultLayout,
     UsuariosHeader,
     UsuariosFiltros,
     UsuariosTabla,
