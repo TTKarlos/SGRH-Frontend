@@ -48,10 +48,6 @@
       </div>
 
       <div v-else-if="empleadosStore.error" class="error-container">
-        />
-      </div>
-
-      <div v-else-if="empleadosStore.error" class="error-container">
         <div class="error-message">
           <AlertTriangle size="24" />
           <p>{{ empleadosStore.error }}</p>
@@ -89,7 +85,9 @@
             <Briefcase size="18" class="tab-icon" />
             Información Laboral
           </button>
+          <!-- Pestaña de documentos solo visible con permisos de lectura -->
           <button
+              v-if="canViewDocuments"
               class="tab-button"
               :class="{ active: activeTab === 'documentos' }"
               @click="activeTab = 'documentos'"
@@ -334,30 +332,18 @@
             </div>
           </div>
 
-          <!-- Documentos -->
-          <div v-if="activeTab === 'documentos'" class="tab-panel">
+          <!-- Documentos (solo visible con permisos) -->
+          <div v-if="activeTab === 'documentos' && canViewDocuments" class="tab-panel">
             <div class="card">
               <div class="card-header">
                 <h2>Documentos</h2>
-                <PermissionCheck :permiso="{ nombre: 'Empleados', tipo: 'Escritura' }">
-                  <button class="btn btn-primary">
-                    <Plus size="18" class="btn-icon" />
-                    Añadir Documento
-                  </button>
-                </PermissionCheck>
               </div>
               <div class="card-body">
-                <div class="empty-state">
-                  <FileText size="48" class="empty-icon" />
-                  <h3>No hay documentos</h3>
-                  <p>No se han subido documentos para este empleado.</p>
-                  <PermissionCheck :permiso="{ nombre: 'Empleados', tipo: 'Escritura' }">
-                    <button class="btn btn-primary">
-                      <Upload size="18" class="btn-icon" />
-                      Subir Documento
-                    </button>
-                  </PermissionCheck>
-                </div>
+                <DocumentosEmpleado
+                    v-if="empleado"
+                    :idEmpleado="empleadoId"
+                    @previsualizar="previsualizarDocumento"
+                />
               </div>
             </div>
           </div>
@@ -405,6 +391,76 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal de previsualización de documento (solo visible con permisos) -->
+      <div v-if="documentoPreview && canViewDocuments" class="modal-overlay">
+        <div class="modal-container modal-lg">
+          <div class="modal-header">
+            <h3>{{ documentoPreview.nombre_original || documentoPreview.nombre }}</h3>
+            <div class="modal-header-actions">
+              <button @click="descargarDocumento(documentoPreview)" class="btn-icon-only" title="Descargar">
+                <Download size="18" />
+              </button>
+              <button @click="cerrarPreview" class="btn-close">
+                <X size="18" />
+              </button>
+            </div>
+          </div>
+          <div class="modal-body preview-container">
+            <!-- Estado de carga -->
+            <div v-if="cargandoPreview" class="preview-loading">
+              <Loader size="32" class="animate-spin" />
+              <p>Cargando vista previa...</p>
+            </div>
+
+            <!-- Estado de error -->
+            <div v-else-if="errorPreview" class="preview-error">
+              <AlertTriangle size="32" />
+              <p>{{ errorPreview }}</p>
+              <p class="error-details" v-if="documentoPreview">
+                Documento: {{ documentoPreview.nombre }} ({{ documentoPreview.tipo_documento }})
+              </p>
+            </div>
+
+            <!-- Vista previa del documento -->
+            <template v-else-if="urlPreview">
+              <!-- Vista previa para PDF -->
+              <iframe
+                  v-if="esPDF"
+                  :src="urlPreview"
+                  class="documento-preview"
+                  frameborder="0"
+                  title="Vista previa del documento"
+              ></iframe>
+
+              <!-- Vista previa para imágenes -->
+              <img
+                  v-else-if="esImagen"
+                  :src="urlPreview"
+                  class="imagen-preview"
+                  alt="Vista previa del documento"
+              />
+
+              <!-- Mensaje para otros tipos de archivo -->
+              <div v-else class="preview-no-disponible">
+                <FileText size="48" class="empty-icon" />
+                <p>Este tipo de documento no se puede previsualizar.</p>
+                <p>Puede descargar el documento para verlo.</p>
+                <button @click="descargarDocumento(documentoPreview)" class="btn btn-primary">
+                  <Download size="16" class="btn-icon" />
+                  Descargar archivo
+                </button>
+              </div>
+            </template>
+
+            <!-- Sin URL de vista previa -->
+            <div v-else class="preview-no-disponible">
+              <AlertTriangle size="32" />
+              <p>No se pudo generar la vista previa del documento.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </DefaultLayout>
 </template>
@@ -413,6 +469,7 @@
 import { ref, computed, onMounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useEmpleadosStore } from "../../stores/empleados"
+import { useDocumentosStore } from "../../stores/documentos"
 import { useAuthStore } from "../../stores/auth"
 import { useNotificationStore } from "../../stores/notification"
 import { useDepartamentosStore } from "../../stores/departamentos"
@@ -421,6 +478,7 @@ import { validateEmpleado } from "../../validation/empleadoSchema"
 import DefaultLayout from "../../layouts/DefaultLayout.vue"
 import LoadingSpinner from "../../components/common/LoadingSpinner.vue"
 import PermissionCheck from "../../components/common/PermissionCheck.vue"
+import DocumentosEmpleado from "../../components/documentos/empleados/DocumentosEmpleado.vue"
 import {
   User,
   Briefcase,
@@ -437,7 +495,8 @@ import {
   Save,
   ToggleLeft,
   ToggleRight,
-  Loader
+  Loader,
+  Download
 } from "lucide-vue-next"
 
 export default {
@@ -447,6 +506,7 @@ export default {
     DefaultLayout,
     LoadingSpinner,
     PermissionCheck,
+    DocumentosEmpleado,
     User,
     Briefcase,
     FileText,
@@ -462,7 +522,8 @@ export default {
     Save,
     ToggleLeft,
     ToggleRight,
-    Loader
+    Loader,
+    Download
   },
 
   props: {
@@ -476,6 +537,7 @@ export default {
     const route = useRoute()
     const router = useRouter()
     const empleadosStore = useEmpleadosStore()
+    const documentosStore = useDocumentosStore()
     const authStore = useAuthStore()
     const notificationStore = useNotificationStore()
     const departamentosStore = useDepartamentosStore()
@@ -486,6 +548,11 @@ export default {
     const validationErrors = ref({})
     const originalEmpleado = ref(null)
     const selectedCentroId = ref(null)
+
+    const documentoPreview = ref(null)
+    const urlPreview = ref(null)
+    const cargandoPreview = ref(false)
+    const errorPreview = ref(null)
 
     const empleadoId = computed(() => {
       return props.id || route.params.id
@@ -499,6 +566,33 @@ export default {
       return departamentosStore.departamentos.filter(
           departamento => departamento.id_centro === selectedCentroId.value
       )
+    })
+
+    const canViewDocuments = computed(() => {
+      return authStore.hasPermission({ nombre: "Documentos", tipo: "Lectura" });
+    });
+
+    const canEditDocuments = computed(() => {
+      return authStore.hasPermission({ nombre: "Documentos", tipo: "Escritura" });
+    });
+
+    const esPDF = computed(() => {
+      if (!documentoPreview.value) return false
+
+      if (documentoPreview.value.mimetype === 'application/pdf') return true
+
+      const nombreOriginal = documentoPreview.value.nombre_original?.toLowerCase() || ''
+      return nombreOriginal.endsWith('.pdf')
+    })
+
+    const esImagen = computed(() => {
+      if (!documentoPreview.value) return false
+
+      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
+      if (documentoPreview.value.mimetype && imageTypes.includes(documentoPreview.value.mimetype)) return true
+
+      const nombreOriginal = documentoPreview.value.nombre_original?.toLowerCase() || ''
+      return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
     })
 
     const loadEmpleado = () => {
@@ -515,6 +609,82 @@ export default {
       })
     }
 
+    const previsualizarDocumento = async (documento) => {
+      if (!canViewDocuments.value) {
+        notificationStore.error('No tiene permisos para ver documentos', 'Error de permisos');
+        return;
+      }
+
+      if (!documento) return
+
+      documentoPreview.value = documento
+      cargandoPreview.value = true
+      errorPreview.value = null
+      urlPreview.value = null
+
+      try {
+        console.log(`Solicitando previsualización para documento ID: ${documento.id_documento}`)
+
+        const url = await documentosStore.previewDocumento(documento.id_documento)
+
+        if (!url) {
+          throw new Error("No se pudo generar la URL de previsualización")
+        }
+
+        console.log("URL de previsualización recibida:", url)
+        urlPreview.value = url
+      } catch (error) {
+        console.error("Error al obtener vista previa:", error)
+
+        let mensajeError = error.message || "No se pudo cargar la vista previa del documento"
+
+        if (error.response) {
+          const status = error.response.status
+          if (status === 404) {
+            mensajeError = "El documento solicitado no existe o no está disponible"
+          } else if (status === 403) {
+            mensajeError = "No tiene permisos para ver este documento"
+          } else {
+            mensajeError = `Error del servidor (${status}): ${error.response.statusText}`
+          }
+        }
+
+        errorPreview.value = mensajeError
+        notificationStore.warning(errorPreview.value, "Error de previsualización")
+      } finally {
+        cargandoPreview.value = false
+      }
+    }
+
+    const cerrarPreview = () => {
+      if (urlPreview.value) {
+        console.log("Liberando recursos de previsualización:", urlPreview.value)
+        URL.revokeObjectURL(urlPreview.value)
+      }
+      documentoPreview.value = null
+      urlPreview.value = null
+      errorPreview.value = null
+    }
+
+    const descargarDocumento = async (documento) => {
+      if (!canViewDocuments.value) {
+        notificationStore.error('No tiene permisos para descargar documentos', 'Error de permisos');
+        return;
+      }
+
+      if (!documento) return
+
+      try {
+        await documentosStore.downloadDocumento(documento.id_documento)
+      } catch (error) {
+        console.error("Error al descargar documento:", error)
+        notificationStore.error(
+            error.message || "Ha ocurrido un error al descargar el documento",
+            "Error al descargar"
+        )
+      }
+    }
+
     onMounted(() => {
       loadEmpleado()
       departamentosStore.fetchDepartamentos()
@@ -529,6 +699,7 @@ export default {
       route,
       router,
       empleadosStore,
+      documentosStore,
       authStore,
       notificationStore,
       departamentosStore,
@@ -541,7 +712,18 @@ export default {
       selectedCentroId,
       departamentosFiltrados,
       empleadoId,
-      loadEmpleado
+      loadEmpleado,
+      documentoPreview,
+      urlPreview,
+      cargandoPreview,
+      errorPreview,
+      esPDF,
+      esImagen,
+      canViewDocuments,
+      canEditDocuments,
+      previsualizarDocumento,
+      cerrarPreview,
+      descargarDocumento
     }
   },
 
@@ -661,7 +843,9 @@ export default {
         const success = await this.empleadosStore.changeEmpleadoStatus(this.empleadoId, newStatus)
 
         if (success) {
+          this.empleado.activo = newStatus
           this.originalEmpleado = JSON.parse(JSON.stringify(this.empleado))
+
           this.notificationStore.success(
               `El empleado ha sido ${newStatus ? "activado" : "desactivado"} correctamente.`,
               `Empleado ${newStatus ? "activado" : "desactivado"}`
@@ -1019,6 +1203,13 @@ export default {
   animation: fadeIn 0.3s ease;
 }
 
+.modal-lg {
+  max-width: 80%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .modal-header {
   display: flex;
   justify-content: space-between;
@@ -1032,6 +1223,12 @@ export default {
   font-weight: 600;
   margin: 0;
   color: #111827;
+}
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-close {
@@ -1051,6 +1248,8 @@ export default {
 
 .modal-body {
   padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .modal-footer {
@@ -1059,6 +1258,75 @@ export default {
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid #e5e7eb;
+}
+
+/* Estilos para la previsualización de documentos */
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+.preview-loading,
+.preview-error,
+.preview-no-disponible {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.preview-loading svg {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.preview-error svg {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.error-details {
+  font-size: 0.875rem;
+  color: #9ca3af;
+  margin-top: 0.5rem;
+}
+
+.documento-preview {
+  width: 100%;
+  height: 100%;
+  min-height: 50vh;
+  border: none;
+}
+
+.imagen-preview {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.btn-icon-only {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 0.375rem;
+  background-color: transparent;
+  color: #4b5563;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-icon-only:hover {
+  background-color: #f3f4f6;
+  color: #dc2626;
 }
 
 .animate-spin {
@@ -1113,6 +1381,11 @@ export default {
 
   .tab-button {
     padding: 0.5rem 1rem;
+  }
+
+  .modal-lg {
+    max-width: 95%;
+    max-height: 90vh;
   }
 }
 </style>

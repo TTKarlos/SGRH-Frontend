@@ -48,6 +48,17 @@
               <Users class="nav-icon" size="18" />
               <span class="nav-text">Empleados</span>
             </router-link>
+
+            <!-- Nuevo apartado de Documentos -->
+            <router-link
+                v-if="hasPermission({nombre: 'Documentos', tipo: 'Lectura'})"
+                to="/documentos"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <FileText class="nav-icon" size="18" />
+              <span class="nav-text">Documentos</span>
+            </router-link>
           </div>
 
           <!-- Título de categoría condicionado por permisos -->
@@ -109,7 +120,8 @@ import {
   LogOut,
   Menu,
   X,
-  Search
+  Search,
+  FileText
 } from 'lucide-vue-next';
 
 export default {
@@ -123,7 +135,8 @@ export default {
     LogOut,
     Menu,
     X,
-    Search
+    Search,
+    FileText
   },
   setup() {
     const authStore = useAuthStore();
@@ -141,6 +154,7 @@ export default {
         'usuario-nuevo': 'Nuevo Usuario',
         'usuario-detalle': 'Detalle de Usuario',
         roles: 'Roles',
+        documentos: 'Documentos',
         unauthorized: 'Acceso Denegado',
         'not-found': 'Página No Encontrada'
       };

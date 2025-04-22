@@ -9,6 +9,7 @@ import UsuarioDetalle from "../views/usuarios/UsuarioDetalle.vue";
 import Empleados from "../views/empleados/Empleados.vue";
 import EmpleadoNuevo from "../views/empleados/EmpleadoNuevo.vue";
 import EmpleadoDetalle from "../views/empleados/EmpleadoDetalle.vue";
+import Documentos from "../views/documentos/Documentos.vue";
 import RolesGestion from "../views/roles/RolesGestion.vue";
 import Unauthorized from "../views/errors/Unauthorized.vue";
 import NotFound from "../views/errors/NotFound.vue";
@@ -92,6 +93,16 @@ const routes = [
         meta: {
             title: "Detalle de Empleado",
             requiredPermission: { nombre: "Empleados", tipo: "Lectura" },
+        },
+    },
+    {
+        path: "/documentos",
+        name: "documentos",
+        component: Documentos,
+        meta: {
+            title: "Documentos",
+            icon: "FileText",
+            requiredPermission: { nombre: "Documentos", tipo: "Lectura" },
         },
     },
     {
