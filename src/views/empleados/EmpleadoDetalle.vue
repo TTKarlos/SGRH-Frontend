@@ -1,52 +1,25 @@
 <template>
   <DefaultLayout>
     <div class="empleado-detalle">
-      <div class="page-header">
-        <div class="header-left">
-          <button @click="goBack" class="btn btn-icon btn-ghost">
-            <ArrowLeft size="18" />
-            <span>Volver</span>
-          </button>
-          <h1 v-if="empleado">{{ empleado.nombre }} {{ empleado.apellidos }}</h1>
-        </div>
+      <!-- Header -->
+      <EmpleadoHeader
+          v-if="empleado"
+          :empleado="empleado"
+          :canEdit="canEdit"
+          :editMode="editMode"
+          @edit="editMode = true"
+          @save="saveEmpleado"
+          @cancel="cancelEdit"
+          @delete="showDeleteModal = true"
+          @toggle-status="toggleEmpleadoStatus"
+      />
 
-        <div class="header-actions" v-if="empleado && canEdit">
-          <button
-              @click="toggleEmpleadoStatus"
-              class="btn btn-status"
-              :class="empleado.activo ? 'btn-status-active' : 'btn-status-inactive'"
-          >
-            <ToggleRight v-if="empleado.activo" size="18" class="btn-icon" />
-            <ToggleLeft v-else size="18" class="btn-icon" />
-            {{ empleado.activo ? 'Activo' : 'Inactivo' }}
-          </button>
-
-          <button v-if="!editMode" @click="editMode = true" class="btn btn-primary">
-            <Edit size="18" class="btn-icon" />
-            Editar
-          </button>
-
-          <button v-if="editMode" @click="saveEmpleado" class="btn btn-success">
-            <Save size="18" class="btn-icon" />
-            Guardar
-          </button>
-
-          <button v-if="editMode" @click="cancelEdit" class="btn btn-secondary">
-            <X size="18" class="btn-icon" />
-            Cancelar
-          </button>
-
-          <button @click="showDeleteModal = true" class="btn btn-danger">
-            <Trash2 size="18" class="btn-icon" />
-            Eliminar
-          </button>
-        </div>
-      </div>
-
+      <!-- Loading state -->
       <div v-if="empleadosStore.loading" class="loading-container">
         <LoadingSpinner message="Cargando datos del empleado..." />
       </div>
 
+      <!-- Error state -->
       <div v-else-if="empleadosStore.error" class="error-container">
         <div class="error-message">
           <AlertTriangle size="24" />
@@ -57,6 +30,7 @@
         </button>
       </div>
 
+      <!-- Not found state -->
       <div v-else-if="!empleado" class="error-container">
         <div class="error-message">
           <AlertTriangle size="24" />
@@ -67,272 +41,39 @@
         </button>
       </div>
 
+      <!-- Content -->
       <div v-else class="empleado-content">
-        <div class="tabs">
-          <button
-              class="tab-button"
-              :class="{ active: activeTab === 'personal' }"
-              @click="activeTab = 'personal'"
-          >
-            <User size="18" class="tab-icon" />
-            Datos Personales
-          </button>
-          <button
-              class="tab-button"
-              :class="{ active: activeTab === 'laboral' }"
-              @click="activeTab = 'laboral'"
-          >
-            <Briefcase size="18" class="tab-icon" />
-            Información Laboral
-          </button>
-          <!-- Pestaña de documentos solo visible con permisos de lectura -->
-          <button
-              v-if="canViewDocuments"
-              class="tab-button"
-              :class="{ active: activeTab === 'documentos' }"
-              @click="activeTab = 'documentos'"
-          >
-            <FileText size="18" class="tab-icon" />
-            Documentos
-          </button>
-          <button
-              class="tab-button"
-              :class="{ active: activeTab === 'historial' }"
-              @click="activeTab = 'historial'"
-          >
-            <FolderOpen size="18" class="tab-icon" />
-            Historial
-          </button>
-        </div>
+        <!-- Tabs -->
+        <EmpleadoTabs
+            :activeTab="activeTab"
+            :canViewDocuments="canViewDocuments"
+            :canViewFormacion="canViewFormacion"
+            :canViewAusencias="canViewAusencias"
+            @change-tab="activeTab = $event"
+        />
 
         <div class="tab-content">
           <!-- Datos Personales -->
-          <div v-if="activeTab === 'personal'" class="tab-panel">
-            <div class="card">
-              <div class="card-header">
-                <h2>Datos Personales</h2>
-              </div>
-              <div class="card-body">
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Nombre</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.nombre"
-                        type="text"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.nombre }"
-                    />
-                    <div v-if="editMode && validationErrors.nombre" class="invalid-feedback">
-                      {{ validationErrors.nombre }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.nombre }}</div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Apellidos</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.apellidos"
-                        type="text"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.apellidos }"
-                    />
-                    <div v-if="editMode && validationErrors.apellidos" class="invalid-feedback">
-                      {{ validationErrors.apellidos }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.apellidos }}</div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>DNI/NIE</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.dni_nie"
-                        type="text"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.dni_nie }"
-                    />
-                    <div v-if="editMode && validationErrors.dni_nie" class="invalid-feedback">
-                      {{ validationErrors.dni_nie }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.dni_nie }}</div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Fecha de Nacimiento</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.fecha_nacimiento"
-                        type="date"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.fecha_nacimiento }"
-                    />
-                    <div v-if="editMode && validationErrors.fecha_nacimiento" class="invalid-feedback">
-                      {{ validationErrors.fecha_nacimiento }}
-                    </div>
-                    <div v-else class="form-value">{{ formatDate(empleado.fecha_nacimiento) }}</div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Estado Civil</label>
-                    <select
-                        v-if="editMode"
-                        v-model="empleado.estado_civil"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.estado_civil }"
-                    >
-                      <option value="">Seleccionar...</option>
-                      <option value="Soltero/a">Soltero/a</option>
-                      <option value="Casado/a">Casado/a</option>
-                      <option value="Divorciado/a">Divorciado/a</option>
-                      <option value="Viudo/a">Viudo/a</option>
-                      <option value="Otro">Otro</option>
-                    </select>
-                    <div v-if="editMode && validationErrors.estado_civil" class="invalid-feedback">
-                      {{ validationErrors.estado_civil }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.estado_civil || 'No especificado' }}</div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Dirección</label>
-                    <textarea
-                        v-if="editMode"
-                        v-model="empleado.direccion"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.direccion }"
-                    ></textarea>
-                    <div v-if="editMode && validationErrors.direccion" class="invalid-feedback">
-                      {{ validationErrors.direccion }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.direccion || 'No especificada' }}</div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Teléfono</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.telefono"
-                        type="tel"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.telefono }"
-                    />
-                    <div v-if="editMode && validationErrors.telefono" class="invalid-feedback">
-                      {{ validationErrors.telefono }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.telefono || 'No especificado' }}</div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Email</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.email"
-                        type="email"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.email }"
-                    />
-                    <div v-if="editMode && validationErrors.email" class="invalid-feedback">
-                      {{ validationErrors.email }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.email || 'No especificado' }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <DatosPersonalesTab
+              v-if="activeTab === 'personal'"
+              :empleado="empleado"
+              :editMode="editMode"
+              :validationErrors="validationErrors"
+          />
 
           <!-- Información Laboral -->
-          <div v-if="activeTab === 'laboral'" class="tab-panel">
-            <div class="card">
-              <div class="card-header">
-                <h2>Información Laboral</h2>
-              </div>
-              <div class="card-body">
-                <div class="form-grid">
-                  <div class="form-group">
-                    <label>Puesto Actual</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.puesto_actual"
-                        type="text"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.puesto_actual }"
-                    />
-                    <div v-if="editMode && validationErrors.puesto_actual" class="invalid-feedback">
-                      {{ validationErrors.puesto_actual }}
-                    </div>
-                    <div v-else class="form-value">{{ empleado.puesto_actual || 'No especificado' }}</div>
-                  </div>
+          <InformacionLaboralTab
+              v-if="activeTab === 'laboral'"
+              :empleado="empleado"
+              :editMode="editMode"
+              :validationErrors="validationErrors"
+              :centros="centrosStore.centros"
+              :departamentos="departamentosStore.departamentos"
+              :selectedCentroId="selectedCentroId"
+              @centro-change="handleCentroChange"
+          />
 
-                  <div class="form-group">
-                    <label>Centro</label>
-                    <select
-                        v-if="editMode"
-                        v-model="empleado.id_centro"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.id_centro }"
-                        @change="handleCentroChange"
-                    >
-                      <option :value="null">Sin centro</option>
-                      <option v-for="centro in centrosStore.centros"
-                              :key="centro.id_centro"
-                              :value="centro.id_centro">
-                        {{ centro.nombre }}
-                      </option>
-                    </select>
-                    <div v-if="editMode && validationErrors.id_centro" class="invalid-feedback">
-                      {{ validationErrors.id_centro }}
-                    </div>
-                    <div v-else class="form-value">
-                      {{ empleado.Centro ? empleado.Centro.nombre : 'No asignado' }}
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Departamento</label>
-                    <select
-                        v-if="editMode"
-                        v-model="empleado.id_departamento"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.id_departamento }"
-                    >
-                      <option :value="null">Sin departamento</option>
-                      <option v-for="departamento in departamentosFiltrados"
-                              :key="departamento.id_departamento"
-                              :value="departamento.id_departamento">
-                        {{ departamento.nombre }}
-                      </option>
-                    </select>
-                    <div v-if="editMode && validationErrors.id_departamento" class="invalid-feedback">
-                      {{ validationErrors.id_departamento }}
-                    </div>
-                    <div v-else class="form-value">
-                      {{ empleado.Departamento ? empleado.Departamento.nombre : 'No asignado' }}
-                    </div>
-                  </div>
-
-                  <div class="form-group">
-                    <label>Fecha de Incorporación</label>
-                    <input
-                        v-if="editMode"
-                        v-model="empleado.fecha_incorporacion"
-                        type="date"
-                        class="form-control"
-                        :class="{ 'is-invalid': validationErrors.fecha_incorporacion }"
-                    />
-                    <div v-if="editMode && validationErrors.fecha_incorporacion" class="invalid-feedback">
-                      {{ validationErrors.fecha_incorporacion }}
-                    </div>
-                    <div v-else class="form-value">{{ formatDate(empleado.fecha_incorporacion) }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Documentos (solo visible con permisos) -->
+          <!-- Documentos -->
           <div v-if="activeTab === 'documentos' && canViewDocuments" class="tab-panel">
             <div class="card">
               <div class="card-header">
@@ -348,21 +89,31 @@
             </div>
           </div>
 
-          <!-- Historial -->
-          <div v-if="activeTab === 'historial'" class="tab-panel">
-            <div class="card">
-              <div class="card-header">
-                <h2>Historial</h2>
-              </div>
-              <div class="card-body">
-                <div class="empty-state">
-                  <Calendar size="48" class="empty-icon" />
-                  <h3>No hay registros</h3>
-                  <p>No hay registros de actividad para este empleado.</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- Formación -->
+          <FormacionTab
+              v-if="activeTab === 'formacion' && canViewFormacion"
+              :formaciones="formacionesStore.formaciones"
+              :loading="formacionesStore.loading"
+              :error="formacionesStore.error"
+              :canEdit="canEditFormacion"
+              @add-formacion="showFormacionModal = true"
+              @edit-formacion="editFormacion"
+              @delete-formacion="deleteFormacion"
+              @reload="loadFormaciones"
+          />
+
+          <!-- Ausencias -->
+          <AusenciasTab
+              v-if="activeTab === 'ausencias' && canViewAusencias"
+              :ausencias="ausenciasStore.ausencias"
+              :loading="ausenciasStore.loading"
+              :error="ausenciasStore.error"
+              :canEdit="canEditAusencias"
+              @add-ausencia="showAusenciaModal = true"
+              @edit-ausencia="editAusencia"
+              @delete-ausencia="deleteAusencia"
+              @reload="loadAusencias"
+          />
         </div>
       </div>
 
@@ -383,7 +134,7 @@
             <button @click="showDeleteModal = false" class="btn btn-secondary">
               Cancelar
             </button>
-            <button @click="deleteEmpleado" class="btn btn-danger" :disabled="empleadosStore.loading">
+            <button @click="confirmDeleteEmpleado" class="btn btn-danger" :disabled="empleadosStore.loading">
               <Trash2 v-if="!empleadosStore.loading" size="18" class="btn-icon" />
               <Loader v-else size="18" class="btn-icon animate-spin" />
               Eliminar
@@ -392,7 +143,7 @@
         </div>
       </div>
 
-      <!-- Modal de previsualización de documento (solo visible con permisos) -->
+      <!-- Modal de previsualización de documento -->
       <div v-if="documentoPreview && canViewDocuments" class="modal-overlay">
         <div class="modal-container modal-lg">
           <div class="modal-header">
@@ -461,42 +212,125 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal de Formación -->
+      <FormacionModal
+          v-if="showFormacionModal"
+          :value="formacionForm"
+          :validationErrors="formacionValidationErrors"
+          :loading="savingFormacion"
+          @close="closeFormacionModal"
+          @save="saveFormacion"
+      />
+
+      <!-- Modal de Ausencia -->
+      <AusenciaModal
+          v-if="showAusenciaModal"
+          :value="ausenciaForm"
+          :tiposAusencia="tiposAusenciaStore.tiposAusencia"
+          :validationErrors="ausenciaValidationErrors"
+          :loading="savingAusencia"
+          @close="closeAusenciaModal"
+          @save="saveAusencia"
+      />
+
+      <!-- Modal de confirmación de eliminación de formación -->
+      <div v-if="showDeleteFormacionModal" class="modal-overlay">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h3>Confirmar eliminación</h3>
+            <button @click="showDeleteFormacionModal = false" class="btn-close">
+              <X size="18" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>¿Está seguro de que desea eliminar la formación <strong>{{ formacionToDelete?.nombre }}</strong>?</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="modal-footer">
+            <button @click="showDeleteFormacionModal = false" class="btn btn-secondary">
+              Cancelar
+            </button>
+            <button @click="confirmDeleteFormacion" class="btn btn-danger" :disabled="deletingFormacion">
+              <Trash2 v-if="!deletingFormacion" size="18" class="btn-icon" />
+              <Loader v-else size="18" class="btn-icon animate-spin" />
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de confirmación de eliminación de ausencia -->
+      <div v-if="showDeleteAusenciaModal" class="modal-overlay">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h3>Confirmar eliminación</h3>
+            <button @click="showDeleteAusenciaModal = false" class="btn-close">
+              <X size="18" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>¿Está seguro de que desea eliminar la ausencia del tipo
+              <strong v-if="ausenciaToDelete?.TipoAusencia?.nombre">
+                {{ ausenciaToDelete.TipoAusencia.nombre }}
+              </strong>
+              <strong v-else-if="getTipoAusenciaNombre(ausenciaToDelete?.id_tipo_ausencia)">
+                {{ getTipoAusenciaNombre(ausenciaToDelete?.id_tipo_ausencia) }}
+              </strong>
+              <strong v-else>
+                seleccionada
+              </strong>?
+            </p>
+            <p>Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="modal-footer">
+            <button @click="showDeleteAusenciaModal = false" class="btn btn-secondary">
+              Cancelar
+            </button>
+            <button @click="confirmDeleteAusencia" class="btn btn-danger" :disabled="deletingAusencia">
+              <Trash2 v-if="!deletingAusencia" size="18" class="btn-icon" />
+              <Loader v-else size="18" class="btn-icon animate-spin" />
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </DefaultLayout>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from "vue"
-import { useRoute, useRouter } from "vue-router"
+import { mapState } from 'pinia'
 import { useEmpleadosStore } from "../../stores/empleados"
 import { useDocumentosStore } from "../../stores/documentos"
 import { useAuthStore } from "../../stores/auth"
 import { useNotificationStore } from "../../stores/notification"
 import { useDepartamentosStore } from "../../stores/departamentos"
 import { useCentrosStore } from "../../stores/centros"
+import { useFormacionEmpleadosStore } from "../../stores/formacionEmpleados"
+import { useAusenciasStore } from "../../stores/ausencias"
+import { useTiposAusenciaStore } from "../../stores/tiposAusencia.js"
 import { validateEmpleado } from "../../validation/empleadoSchema"
 import DefaultLayout from "../../layouts/DefaultLayout.vue"
 import LoadingSpinner from "../../components/common/LoadingSpinner.vue"
-import PermissionCheck from "../../components/common/PermissionCheck.vue"
 import DocumentosEmpleado from "../../components/documentos/empleados/DocumentosEmpleado.vue"
+
+import EmpleadoHeader from "../../components/empleados/detalle/EmpleadoHeader.vue"
+import EmpleadoTabs from "../../components/empleados/detalle/EmpleadoTabs.vue"
+import DatosPersonalesTab from "../../components/empleados/detalle/tabs/DatosPersonalesTab.vue"
+import InformacionLaboralTab from "../../components/empleados/detalle/tabs/InformacionLaboralTab.vue"
+import FormacionTab from "../../components/empleados/detalle/tabs/FormacionTab.vue"
+import AusenciasTab from "../../components/empleados/detalle/tabs/AusenciasTab.vue"
+import FormacionModal from "../../components/empleados/detalle/modals/FormacionModal.vue"
+import AusenciaModal from "../../components/empleados/detalle/modals/AusenciaModal.vue"
+
 import {
-  User,
-  Briefcase,
-  FileText,
-  FolderOpen,
-  Calendar,
-  Edit,
-  Trash2,
-  ArrowLeft,
-  X,
   AlertTriangle,
-  Plus,
-  Upload,
-  Save,
-  ToggleLeft,
-  ToggleRight,
+  Trash2,
+  X,
   Loader,
-  Download
+  Download,
+  FileText
 } from "lucide-vue-next"
 
 export default {
@@ -505,25 +339,21 @@ export default {
   components: {
     DefaultLayout,
     LoadingSpinner,
-    PermissionCheck,
     DocumentosEmpleado,
-    User,
-    Briefcase,
-    FileText,
-    FolderOpen,
-    Calendar,
-    Edit,
-    Trash2,
-    ArrowLeft,
-    X,
+    EmpleadoHeader,
+    EmpleadoTabs,
+    DatosPersonalesTab,
+    InformacionLaboralTab,
+    FormacionTab,
+    AusenciasTab,
+    FormacionModal,
+    AusenciaModal,
     AlertTriangle,
-    Plus,
-    Upload,
-    Save,
-    ToggleLeft,
-    ToggleRight,
+    Trash2,
+    X,
     Loader,
-    Download
+    Download,
+    FileText
   },
 
   props: {
@@ -533,197 +363,55 @@ export default {
     }
   },
 
-  setup(props) {
-    const route = useRoute()
-    const router = useRouter()
-    const empleadosStore = useEmpleadosStore()
-    const documentosStore = useDocumentosStore()
-    const authStore = useAuthStore()
-    const notificationStore = useNotificationStore()
-    const departamentosStore = useDepartamentosStore()
-    const centrosStore = useCentrosStore()
-    const activeTab = ref("personal")
-    const showDeleteModal = ref(false)
-    const editMode = ref(false)
-    const validationErrors = ref({})
-    const originalEmpleado = ref(null)
-    const selectedCentroId = ref(null)
-
-    const documentoPreview = ref(null)
-    const urlPreview = ref(null)
-    const cargandoPreview = ref(false)
-    const errorPreview = ref(null)
-
-    const empleadoId = computed(() => {
-      return props.id || route.params.id
-    })
-
-    const departamentosFiltrados = computed(() => {
-      if (!selectedCentroId.value) {
-        return departamentosStore.departamentos
-      }
-
-      return departamentosStore.departamentos.filter(
-          departamento => departamento.id_centro === selectedCentroId.value
-      )
-    })
-
-    const canViewDocuments = computed(() => {
-      return authStore.hasPermission({ nombre: "Documentos", tipo: "Lectura" });
-    });
-
-    const canEditDocuments = computed(() => {
-      return authStore.hasPermission({ nombre: "Documentos", tipo: "Escritura" });
-    });
-
-    const esPDF = computed(() => {
-      if (!documentoPreview.value) return false
-
-      if (documentoPreview.value.mimetype === 'application/pdf') return true
-
-      const nombreOriginal = documentoPreview.value.nombre_original?.toLowerCase() || ''
-      return nombreOriginal.endsWith('.pdf')
-    })
-
-    const esImagen = computed(() => {
-      if (!documentoPreview.value) return false
-
-      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
-      if (documentoPreview.value.mimetype && imageTypes.includes(documentoPreview.value.mimetype)) return true
-
-      const nombreOriginal = documentoPreview.value.nombre_original?.toLowerCase() || ''
-      return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
-    })
-
-    const loadEmpleado = () => {
-      if (!empleadoId.value) {
-        return
-      }
-
-      console.log("Cargando empleado con ID:", empleadoId.value)
-      empleadosStore.fetchEmpleadoById(empleadoId.value).then(() => {
-        if (empleadosStore.currentEmpleado) {
-          originalEmpleado.value = JSON.parse(JSON.stringify(empleadosStore.currentEmpleado))
-          selectedCentroId.value = empleadosStore.currentEmpleado.id_centro
-        }
-      })
-    }
-
-    const previsualizarDocumento = async (documento) => {
-      if (!canViewDocuments.value) {
-        notificationStore.error('No tiene permisos para ver documentos', 'Error de permisos');
-        return;
-      }
-
-      if (!documento) return
-
-      documentoPreview.value = documento
-      cargandoPreview.value = true
-      errorPreview.value = null
-      urlPreview.value = null
-
-      try {
-        console.log(`Solicitando previsualización para documento ID: ${documento.id_documento}`)
-
-        const url = await documentosStore.previewDocumento(documento.id_documento)
-
-        if (!url) {
-          throw new Error("No se pudo generar la URL de previsualización")
-        }
-
-        console.log("URL de previsualización recibida:", url)
-        urlPreview.value = url
-      } catch (error) {
-        console.error("Error al obtener vista previa:", error)
-
-        let mensajeError = error.message || "No se pudo cargar la vista previa del documento"
-
-        if (error.response) {
-          const status = error.response.status
-          if (status === 404) {
-            mensajeError = "El documento solicitado no existe o no está disponible"
-          } else if (status === 403) {
-            mensajeError = "No tiene permisos para ver este documento"
-          } else {
-            mensajeError = `Error del servidor (${status}): ${error.response.statusText}`
-          }
-        }
-
-        errorPreview.value = mensajeError
-        notificationStore.warning(errorPreview.value, "Error de previsualización")
-      } finally {
-        cargandoPreview.value = false
-      }
-    }
-
-    const cerrarPreview = () => {
-      if (urlPreview.value) {
-        console.log("Liberando recursos de previsualización:", urlPreview.value)
-        URL.revokeObjectURL(urlPreview.value)
-      }
-      documentoPreview.value = null
-      urlPreview.value = null
-      errorPreview.value = null
-    }
-
-    const descargarDocumento = async (documento) => {
-      if (!canViewDocuments.value) {
-        notificationStore.error('No tiene permisos para descargar documentos', 'Error de permisos');
-        return;
-      }
-
-      if (!documento) return
-
-      try {
-        await documentosStore.downloadDocumento(documento.id_documento)
-      } catch (error) {
-        console.error("Error al descargar documento:", error)
-        notificationStore.error(
-            error.message || "Ha ocurrido un error al descargar el documento",
-            "Error al descargar"
-        )
-      }
-    }
-
-    onMounted(() => {
-      loadEmpleado()
-      departamentosStore.fetchDepartamentos()
-      centrosStore.fetchCentros()
-    })
-
-    watch(empleadoId, () => {
-      loadEmpleado()
-    })
-
+  data() {
     return {
-      route,
-      router,
-      empleadosStore,
-      documentosStore,
-      authStore,
-      notificationStore,
-      departamentosStore,
-      centrosStore,
-      activeTab,
-      showDeleteModal,
-      editMode,
-      validationErrors,
-      originalEmpleado,
-      selectedCentroId,
-      departamentosFiltrados,
-      empleadoId,
-      loadEmpleado,
-      documentoPreview,
-      urlPreview,
-      cargandoPreview,
-      errorPreview,
-      esPDF,
-      esImagen,
-      canViewDocuments,
-      canEditDocuments,
-      previsualizarDocumento,
-      cerrarPreview,
-      descargarDocumento
+      empleadosStore: useEmpleadosStore(),
+      documentosStore: useDocumentosStore(),
+      authStore: useAuthStore(),
+      notificationStore: useNotificationStore(),
+      departamentosStore: useDepartamentosStore(),
+      centrosStore: useCentrosStore(),
+      formacionesStore: useFormacionEmpleadosStore(),
+      ausenciasStore: useAusenciasStore(),
+      tiposAusenciaStore: useTiposAusenciaStore(),
+
+      activeTab: "personal",
+      showDeleteModal: false,
+      editMode: false,
+      validationErrors: {},
+      originalEmpleado: null,
+      selectedCentroId: null,
+
+      documentoPreview: null,
+      urlPreview: null,
+      cargandoPreview: false,
+      errorPreview: null,
+
+      showFormacionModal: false,
+      formacionForm: {
+        nombre: '',
+        es_interna: false,
+        fecha_inicio: '',
+        fecha_fin: ''
+      },
+      formacionValidationErrors: {},
+      savingFormacion: false,
+      showDeleteFormacionModal: false,
+      formacionToDelete: null,
+      deletingFormacion: false,
+
+      showAusenciaModal: false,
+      ausenciaForm: {
+        id_tipo_ausencia: null,
+        fecha_inicio: '',
+        fecha_fin: ''
+      },
+      ausenciaValidationErrors: {},
+      savingAusencia: false,
+      showDeleteAusenciaModal: false,
+      ausenciaToDelete: null,
+      deletingAusencia: false,
+      tipoAusenciaEnCarga: {}
     }
   },
 
@@ -732,45 +420,127 @@ export default {
       return this.empleadosStore.currentEmpleado
     },
 
+    empleadoId() {
+      return this.id || this.$route.params.id
+    },
+
     canEdit() {
       return this.authStore.hasPermission({ nombre: "Empleados", tipo: "Escritura" })
+    },
+
+    canViewDocuments() {
+      return this.authStore.hasPermission({ nombre: "Documentos", tipo: "Lectura" })
+    },
+
+    canEditDocuments() {
+      return this.authStore.hasPermission({ nombre: "Documentos", tipo: "Escritura" })
+    },
+
+    canViewFormacion() {
+      return this.authStore.hasPermission({ nombre: "Empleados", tipo: "Lectura" })
+    },
+
+    canEditFormacion() {
+      return this.authStore.hasPermission({ nombre: "Empleados", tipo: "Escritura" })
+    },
+
+    canViewAusencias() {
+      return this.authStore.hasPermission({ nombre: "Ausencias", tipo: "Lectura" })
+    },
+
+    canEditAusencias() {
+      return this.authStore.hasPermission({ nombre: "Ausencias", tipo: "Escritura" })
+    },
+
+    esPDF() {
+      if (!this.documentoPreview) return false
+
+      if (this.documentoPreview.mimetype === 'application/pdf') return true
+
+      const nombreOriginal = this.documentoPreview.nombre_original?.toLowerCase() || ''
+      return nombreOriginal.endsWith('.pdf')
+    },
+
+    esImagen() {
+      if (!this.documentoPreview) return false
+
+      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
+      if (this.documentoPreview.mimetype && imageTypes.includes(this.documentoPreview.mimetype)) return true
+
+      const nombreOriginal = this.documentoPreview.nombre_original?.toLowerCase() || ''
+      return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
+    }
+  },
+
+  watch: {
+    empleadoId: {
+      handler() {
+        this.loadEmpleado()
+
+        if (this.canViewFormacion) {
+          this.loadFormaciones()
+        }
+
+        if (this.canViewAusencias) {
+          this.loadAusencias()
+        }
+      },
+      immediate: true
+    },
+
+    activeTab(newTab) {
+      if (newTab === 'formacion' && this.canViewFormacion) {
+        this.loadFormaciones()
+      } else if (newTab === 'ausencias' && this.canViewAusencias) {
+        this.loadAusencias()
+      }
+    }
+  },
+
+  created() {
+    this.departamentosStore.fetchDepartamentos()
+    this.centrosStore.fetchCentros()
+
+    if (this.canViewAusencias) {
+      this.loadTiposAusencia()
     }
   },
 
   methods: {
-    handleCentroChange() {
-      this.selectedCentroId = this.empleado.id_centro
+    loadEmpleado() {
+      if (!this.empleadoId) return
 
-      if (this.empleado.id_departamento) {
+      console.log("Cargando empleado con ID:", this.empleadoId)
+      this.empleadosStore.fetchEmpleadoById(this.empleadoId).then(() => {
+        if (this.empleadosStore.currentEmpleado) {
+          this.originalEmpleado = JSON.parse(JSON.stringify(this.empleadosStore.currentEmpleado))
+          this.selectedCentroId = this.empleadosStore.currentEmpleado.id_centro
+        }
+      })
+    },
+
+    handleCentroChange(centroId) {
+      this.selectedCentroId = centroId
+
+      if (this.empleadosStore.currentEmpleado.id_departamento) {
         const departamentoActual = this.departamentosStore.departamentos.find(
-            d => d.id_departamento === this.empleado.id_departamento
+            d => d.id_departamento === this.empleadosStore.currentEmpleado.id_departamento
         )
 
         if (departamentoActual && departamentoActual.id_centro !== this.selectedCentroId) {
-          this.empleado.id_departamento = null
+          this.empleadosStore.currentEmpleado.id_departamento = null
         }
       }
     },
 
-    formatDate(dateString) {
-      if (!dateString) return "No especificada"
-
-      const date = new Date(dateString)
-      return date.toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-    },
-
     goBack() {
-      this.router.push("/empleados")
+      this.$router.push("/empleados")
     },
 
     cancelEdit() {
       if (this.originalEmpleado) {
         this.empleadosStore.currentEmpleado = JSON.parse(JSON.stringify(this.originalEmpleado))
-        this.selectedCentroId = this.empleado.id_centro
+        this.selectedCentroId = this.empleadosStore.currentEmpleado.id_centro
       }
       this.editMode = false
       this.validationErrors = {}
@@ -778,7 +548,7 @@ export default {
 
     async saveEmpleado() {
       try {
-        const { isValid, errors } = await validateEmpleado(this.empleado)
+        const { isValid, errors } = await validateEmpleado(this.empleadosStore.currentEmpleado)
 
         if (!isValid) {
           this.validationErrors = errors
@@ -793,7 +563,10 @@ export default {
 
         this.validationErrors = {}
 
-        const updatedEmpleado = await this.empleadosStore.updateEmpleado(this.empleadoId, this.empleado)
+        const updatedEmpleado = await this.empleadosStore.updateEmpleado(
+            this.empleadoId,
+            this.empleadosStore.currentEmpleado
+        )
 
         if (updatedEmpleado) {
           this.originalEmpleado = JSON.parse(JSON.stringify(updatedEmpleado))
@@ -812,14 +585,14 @@ export default {
       }
     },
 
-    async deleteEmpleado() {
+    async confirmDeleteEmpleado() {
       try {
         const success = await this.empleadosStore.deleteEmpleado(this.empleadoId)
 
         if (success) {
           this.showDeleteModal = false
           this.notificationStore.success("El empleado ha sido eliminado correctamente.", "Empleado eliminado")
-          this.router.push("/empleados")
+          this.$router.push("/empleados")
         } else {
           this.notificationStore.error(
               "Ha ocurrido un error al eliminar el empleado. Por favor, inténtelo de nuevo.",
@@ -837,14 +610,14 @@ export default {
 
     async toggleEmpleadoStatus() {
       try {
-        const newStatus = !this.empleado.activo
+        const newStatus = !this.empleadosStore.currentEmpleado.activo
         console.log(`Componente: Cambiando estado a ${newStatus ? 'activo' : 'inactivo'}`)
 
         const success = await this.empleadosStore.changeEmpleadoStatus(this.empleadoId, newStatus)
 
         if (success) {
-          this.empleado.activo = newStatus
-          this.originalEmpleado = JSON.parse(JSON.stringify(this.empleado))
+          this.empleadosStore.currentEmpleado.activo = newStatus
+          this.originalEmpleado = JSON.parse(JSON.stringify(this.empleadosStore.currentEmpleado))
 
           this.notificationStore.success(
               `El empleado ha sido ${newStatus ? "activado" : "desactivado"} correctamente.`,
@@ -864,7 +637,320 @@ export default {
         )
       }
     },
-  },
+
+    async previsualizarDocumento(documento) {
+      if (!this.canViewDocuments) {
+        this.notificationStore.error('No tiene permisos para ver documentos', 'Error de permisos')
+        return
+      }
+
+      if (!documento) return
+
+      this.documentoPreview = documento
+      this.cargandoPreview = true
+      this.errorPreview = null
+      this.urlPreview = null
+
+      try {
+        console.log(`Solicitando previsualización para documento ID: ${documento.id_documento}`)
+
+        const url = await this.documentosStore.previewDocumento(documento.id_documento)
+
+        if (!url) {
+          throw new Error("No se pudo generar la URL de previsualización")
+        }
+
+        console.log("URL de previsualización recibida:", url)
+        this.urlPreview = url
+      } catch (error) {
+        console.error("Error al obtener vista previa:", error)
+
+        let mensajeError = error.message || "No se pudo cargar la vista previa del documento"
+
+        if (error.response) {
+          const status = error.response.status
+          if (status === 404) {
+            mensajeError = "El documento solicitado no existe o no está disponible"
+          } else if (status === 403) {
+            mensajeError = "No tiene permisos para ver este documento"
+          } else {
+            mensajeError = `Error del servidor (${status}): ${error.response.statusText}`
+          }
+        }
+
+        this.errorPreview = mensajeError
+        this.notificationStore.warning(this.errorPreview, "Error de previsualización")
+      } finally {
+        this.cargandoPreview = false
+      }
+    },
+
+    cerrarPreview() {
+      if (this.urlPreview) {
+        console.log("Liberando recursos de previsualización:", this.urlPreview)
+        URL.revokeObjectURL(this.urlPreview)
+      }
+      this.documentoPreview = null
+      this.urlPreview = null
+      this.errorPreview = null
+    },
+
+    async descargarDocumento(documento) {
+      if (!this.canViewDocuments) {
+        this.notificationStore.error('No tiene permisos para descargar documentos', 'Error de permisos')
+        return
+      }
+
+      if (!documento) return
+
+      try {
+        await this.documentosStore.downloadDocumento(documento.id_documento)
+      } catch (error) {
+        console.error("Error al descargar documento:", error)
+        this.notificationStore.error(
+            error.message || "Ha ocurrido un error al descargar el documento",
+            "Error al descargar"
+        )
+      }
+    },
+
+    async loadFormaciones() {
+      if (!this.empleadoId || !this.canViewFormacion) return
+      await this.formacionesStore.fetchFormacionesByEmpleado(this.empleadoId)
+    },
+
+    closeFormacionModal() {
+      this.showFormacionModal = false
+      this.formacionForm = {
+        nombre: '',
+        es_interna: false,
+        fecha_inicio: '',
+        fecha_fin: ''
+      }
+      this.formacionValidationErrors = {}
+    },
+
+    editFormacion(formacion) {
+      this.formacionForm = {
+        id_formacion: formacion.id_formacion,
+        nombre: formacion.nombre,
+        es_interna: formacion.es_interna,
+        fecha_inicio: formacion.fecha_inicio,
+        fecha_fin: formacion.fecha_fin || ''
+      }
+      this.showFormacionModal = true
+    },
+
+    async saveFormacion(formacion) {
+      if (!this.canEditFormacion) {
+        this.notificationStore.error('No tiene permisos para editar formaciones', 'Error de permisos')
+        return
+      }
+
+      this.savingFormacion = true
+      this.formacionValidationErrors = {}
+
+      try {
+        const formacionData = {
+          ...formacion,
+          id_empleado: this.empleadoId
+        }
+
+        let result
+        if (formacionData.id_formacion) {
+          result = await this.formacionesStore.updateFormacion(formacionData.id_formacion, formacionData)
+        } else {
+          result = await this.formacionesStore.createFormacion(formacionData)
+        }
+
+        if (result) {
+          await this.loadFormaciones()
+          this.closeFormacionModal()
+        }
+      } catch (error) {
+        console.error("Error al guardar formación:", error)
+
+        if (error.response?.data?.errors) {
+          this.formacionValidationErrors = error.response.data.errors
+        } else {
+          this.notificationStore.error(
+              error.message || "Ha ocurrido un error al guardar la formación",
+              "Error"
+          )
+        }
+      } finally {
+        this.savingFormacion = false
+      }
+    },
+
+    deleteFormacion(formacion) {
+      this.formacionToDelete = formacion
+      this.showDeleteFormacionModal = true
+    },
+
+    async confirmDeleteFormacion() {
+      if (!this.canEditFormacion) {
+        this.notificationStore.error('No tiene permisos para eliminar formaciones', 'Error de permisos')
+        return
+      }
+
+      this.deletingFormacion = true
+
+      try {
+        const success = await this.formacionesStore.deleteFormacion(this.formacionToDelete.id_formacion)
+
+        if (success) {
+          await this.loadFormaciones()
+          this.showDeleteFormacionModal = false
+          this.formacionToDelete = null
+        }
+      } catch (error) {
+        console.error("Error al eliminar formación:", error)
+        this.notificationStore.error(
+            error.message || "Ha ocurrido un error al eliminar la formación",
+            "Error"
+        )
+      } finally {
+        this.deletingFormacion = false
+      }
+    },
+
+    async loadAusencias() {
+      if (!this.empleadoId || !this.canViewAusencias) return
+      await this.ausenciasStore.fetchAusenciasByEmpleado(this.empleadoId)
+    },
+
+    async loadTiposAusencia() {
+      if (!this.canViewAusencias) return
+      await this.tiposAusenciaStore.fetchTiposAusencia()
+    },
+
+    closeAusenciaModal() {
+      this.showAusenciaModal = false
+      this.ausenciaForm = {
+        id_tipo_ausencia: null,
+        fecha_inicio: '',
+        fecha_fin: ''
+      }
+      this.ausenciaValidationErrors = {}
+    },
+
+    editAusencia(ausencia) {
+      this.ausenciaForm = {
+        id_ausencia: ausencia.id_ausencia,
+        id_tipo_ausencia: ausencia.id_tipo_ausencia,
+        fecha_inicio: ausencia.fecha_inicio,
+        fecha_fin: ausencia.fecha_fin
+      }
+      this.showAusenciaModal = true
+    },
+
+    async saveAusencia(ausencia) {
+      if (!this.canEditAusencias) {
+        this.notificationStore.error('No tiene permisos para editar ausencias', 'Error de permisos')
+        return
+      }
+
+      this.savingAusencia = true
+      this.ausenciaValidationErrors = {}
+
+      try {
+        const ausenciaData = {
+          ...ausencia,
+          id_empleado: this.empleadoId
+        }
+
+        let result
+        if (ausenciaData.id_ausencia) {
+          result = await this.ausenciasStore.updateAusencia(ausenciaData.id_ausencia, ausenciaData)
+        } else {
+          result = await this.ausenciasStore.createAusencia(ausenciaData)
+        }
+
+        if (result) {
+          await this.loadAusencias()
+          this.closeAusenciaModal()
+        }
+      } catch (error) {
+        console.error("Error al guardar ausencia:", error)
+
+        if (error.response?.data?.errors) {
+          this.ausenciaValidationErrors = error.response.data.errors
+        } else {
+          this.notificationStore.error(
+              error.message || "Ha ocurrido un error al guardar la ausencia",
+              "Error"
+          )
+        }
+      } finally {
+        this.savingAusencia = false
+      }
+    },
+
+    deleteAusencia(ausencia) {
+      this.ausenciaToDelete = ausencia
+      this.showDeleteAusenciaModal = true
+    },
+
+    async confirmDeleteAusencia() {
+      if (!this.canEditAusencias) {
+        this.notificationStore.error('No tiene permisos para eliminar ausencias', 'Error de permisos')
+        return
+      }
+
+      this.deletingAusencia = true
+
+      try {
+        const success = await this.ausenciasStore.deleteAusencia(this.ausenciaToDelete.id_ausencia)
+
+        if (success) {
+          await this.loadAusencias()
+          this.showDeleteAusenciaModal = false
+          this.ausenciaToDelete = null
+        }
+      } catch (error) {
+        console.error("Error al eliminar ausencia:", error)
+        this.notificationStore.error(
+            error.message || "Ha ocurrido un error al eliminar la ausencia",
+            "Error"
+        )
+      } finally {
+        this.deletingAusencia = false
+      }
+    },
+
+    getTipoAusenciaNombre(idTipoAusencia) {
+      if (!idTipoAusencia) return "Sin especificar"
+
+      const idNum = parseInt(idTipoAusencia)
+
+      const tipo = this.tiposAusenciaStore.getTipoAusenciaById(idNum)
+
+      if (tipo) {
+        return tipo.nombre
+      }
+
+      if (!this.tipoAusenciaEnCarga[idNum]) {
+        this.tipoAusenciaEnCarga[idNum] = true
+        this.cargarTipoAusencia(idNum)
+        return "Cargando..."
+      }
+
+      return "Cargando..."
+    },
+
+    async cargarTipoAusencia(id) {
+      if (!id) return
+
+      try {
+        await this.tiposAusenciaStore.getTipoAusencia(id)
+      } catch (error) {
+        console.error(`Error al cargar tipo de ausencia con ID ${id}:`, error)
+      } finally {
+        this.tipoAusenciaEnCarga[id] = false
+      }
+    }
+  }
 }
 </script>
 
@@ -879,252 +965,8 @@ export default {
   font-family: 'Poppins', sans-serif;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.header-left h1 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-  position: relative;
-  padding-bottom: 0.5rem;
-}
-
-.header-left h1::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 40px;
-  height: 3px;
-  background: linear-gradient(to right, #dc2626, #ef4444);
-  border-radius: 3px;
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.btn-icon {
-  margin-right: 0.5rem;
-}
-
-.btn-ghost {
-  background-color: transparent;
-  color: #4b5563;
-}
-
-.btn-ghost:hover {
-  background-color: #f3f4f6;
-}
-
-.btn-primary {
-  background-color: #dc2626;
-  color: white;
-  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
-}
-
-.btn-primary:hover {
-  background-color: #b91c1c;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
-}
-
-.btn-success {
-  background-color: #dc2626;
-  color: white;
-  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
-}
-
-.btn-success:hover {
-  background-color: #b91c1c;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
-}
-
-.btn-secondary {
-  background-color: #f3f4f6;
-  color: #4b5563;
-  border: 1px solid #e5e7eb;
-}
-
-.btn-secondary:hover {
-  background-color: #e5e7eb;
-}
-
-.btn-danger {
-  background-color: #fee2e2;
-  color: #dc2626;
-}
-
-.btn-danger:hover {
-  background-color: #fecaca;
-}
-
-.btn-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  border-radius: 9999px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.btn-status-active {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.btn-status-inactive {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.tabs {
-  display: flex;
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 1.5rem;
-  overflow-x: auto;
-}
-
-.tab-button {
-  display: flex;
-  align-items: center;
-  padding: 0.75rem 1.25rem;
-  border: none;
-  background: none;
-  font-weight: 500;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
-}
-
-.tab-button:hover {
-  color: #4b5563;
-}
-
-.tab-button.active {
-  color: #dc2626;
-  border-bottom-color: #dc2626;
-}
-
-.tab-icon {
-  margin-right: 0.5rem;
-}
-
 .tab-content {
   flex: 1;
-}
-
-.tab-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  animation: fadeIn 0.3s ease;
-}
-
-.card {
-  background-color: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  border: 1px solid #e5e7eb;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafb;
-}
-
-.card-header h2 {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-.card-body {
-  padding: 1.5rem;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: 500;
-  color: #4b5563;
-  font-size: 0.875rem;
-}
-
-.form-control {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
-  background-color: white;
-  color: #111827;
-  transition: all 0.2s ease;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #fca5a5;
-  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
-}
-
-.form-control.is-invalid {
-  border-color: #dc2626;
-}
-
-.invalid-feedback {
-  color: #dc2626;
-  font-size: 0.875rem;
-}
-
-.form-value {
-  padding: 0.5rem 0;
-  color: #111827;
-  font-weight: 500;
 }
 
 .loading-container,
@@ -1153,31 +995,51 @@ export default {
   margin-bottom: 1rem;
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
+.btn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
-  text-align: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
 }
 
-.empty-icon {
+.btn-icon {
+  margin-right: 0.5rem;
+}
+
+.btn-primary {
+  background-color: #dc2626;
+  color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
+}
+
+.btn-primary:hover {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-danger {
+  background-color: #fee2e2;
   color: #dc2626;
-  opacity: 0.5;
-  margin-bottom: 1rem;
 }
 
-.empty-state h3 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #374151;
-}
-
-.empty-state p {
-  color: #6b7280;
-  margin-bottom: 1.5rem;
+.btn-danger:hover {
+  background-color: #fecaca;
 }
 
 .modal-overlay {
@@ -1356,36 +1218,6 @@ export default {
 @media (max-width: 768px) {
   .empleado-detalle {
     padding: 1rem;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-  }
-
-  .tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .tab-button {
-    padding: 0.5rem 1rem;
-  }
-
-  .modal-lg {
-    max-width: 95%;
-    max-height: 90vh;
   }
 }
 </style>
