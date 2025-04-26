@@ -1,155 +1,163 @@
-import { ref, computed, watch } from 'vue'
-import { useDocumentosStore } from "../stores/documentos"
-import { useNotificationStore } from "../stores/notification"
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { useDocumentosStore } from '@/stores/documentos'
+import { useNotificationStore } from '@/stores/notification'
 
-export function useDocumentos(idEmpleado = null) {
+/**
+ * Composable para gestionar documentos
+ */
+export const useDocumentos = (idEmpleado) => {
     const documentosStore = useDocumentosStore()
     const notificationStore = useNotificationStore()
 
+    const documentos = ref([])
     const cargando = ref(false)
     const error = ref(null)
+
+    const filtros = ref({
+        busqueda: '',
+        tipo: '',
+        fechaDesde: '',
+        fechaHasta: ''
+    })
+
     const documentoPreview = ref(null)
     const urlPreview = ref(null)
     const cargandoPreview = ref(false)
     const errorPreview = ref(null)
-
-    const filtros = ref({
-        busqueda: "",
-        tipo: "",
-        fechaDesde: "",
-        fechaHasta: "",
-        activos: true,
-        archivados: false,
-    })
+    const previewEnProceso = ref(false)
+    const previewTimeoutId = ref(null)
 
     const documentosFiltrados = computed(() => {
-        if (!documentosStore.documentos || !Array.isArray(documentosStore.documentos)) {
-            return []
-        }
+        if (!documentos.value || documentos.value.length === 0) return []
 
-        let resultado = [...documentosStore.documentos]
+        return documentos.value.filter(doc => {
+            const busquedaMatch = !filtros.value.busqueda ||
+                doc.nombre?.toLowerCase().includes(filtros.value.busqueda.toLowerCase()) ||
+                doc.nombre_original?.toLowerCase().includes(filtros.value.busqueda.toLowerCase()) ||
+                doc.tipo_documento?.toLowerCase().includes(filtros.value.busqueda.toLowerCase()) ||
+                doc.observaciones?.toLowerCase().includes(filtros.value.busqueda.toLowerCase())
 
-        if (filtros.value.busqueda) {
-            const busqueda = filtros.value.busqueda.toLowerCase()
-            resultado = resultado.filter(
-                (doc) =>
-                    (doc.nombre && doc.nombre.toLowerCase().includes(busqueda)) ||
-                    (doc.observaciones && doc.observaciones.toLowerCase().includes(busqueda)),
-            )
-        }
+            const tipoMatch = !filtros.value.tipo || doc.tipo_documento === filtros.value.tipo
 
-        if (filtros.value.tipo) {
-            resultado = resultado.filter((doc) => doc.tipo_documento === filtros.value.tipo)
-        }
+            const fechaDesdeMatch = !filtros.value.fechaDesde ||
+                new Date(doc.fecha_subida) >= new Date(filtros.value.fechaDesde)
 
-        if (filtros.value.fechaDesde) {
-            const fechaDesde = new Date(filtros.value.fechaDesde)
-            resultado = resultado.filter((doc) => {
-                if (!doc.fecha_subida) return false
-                const fechaDoc = new Date(doc.fecha_subida)
-                return fechaDoc >= fechaDesde
-            })
-        }
+            const fechaHastaMatch = !filtros.value.fechaHasta ||
+                new Date(doc.fecha_subida) <= new Date(filtros.value.fechaHasta)
 
-        if (filtros.value.fechaHasta) {
-            const fechaHasta = new Date(filtros.value.fechaHasta)
-            fechaHasta.setHours(23, 59, 59)
-            resultado = resultado.filter((doc) => {
-                if (!doc.fecha_subida) return false
-                const fechaDoc = new Date(doc.fecha_subida)
-                return fechaDoc <= fechaHasta
-            })
-        }
-
-        return resultado
+            return busquedaMatch && tipoMatch && fechaDesdeMatch && fechaHastaMatch
+        })
     })
 
-    const esPDF = computed(() => {
-        if (!documentoPreview.value) return false
+    const tiposDocumento = computed(() => {
+        if (!documentos.value || documentos.value.length === 0) return []
 
-        if (documentoPreview.value.mimetype === 'application/pdf') return true
-
-        const nombreOriginal = documentoPreview.value.nombre_original?.toLowerCase() || ''
-        return nombreOriginal.endsWith('.pdf')
-    })
-
-    const esImagen = computed(() => {
-        if (!documentoPreview.value) return false
-
-        const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
-        if (documentoPreview.value.mimetype && imageTypes.includes(documentoPreview.value.mimetype)) return true
-
-        const nombreOriginal = documentoPreview.value.nombre_original?.toLowerCase() || ''
-        return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
+        const tipos = [...new Set(documentos.value.map(doc => doc.tipo_documento).filter(Boolean))]
+        return tipos.sort()
     })
 
     const cargarDocumentos = async () => {
+        if (!idEmpleado) return
+
         cargando.value = true
         error.value = null
 
         try {
-            if (idEmpleado) {
-                await documentosStore.fetchDocumentosByEmpleado(idEmpleado)
-            } else {
-                await documentosStore.fetchDocumentos()
-            }
+            const response = await documentosStore.fetchDocumentosByEmpleado(idEmpleado)
+            documentos.value = response || []
         } catch (err) {
-            console.error("Error al cargar documentos:", err)
-            error.value = err.message || "Error al cargar documentos"
-            notificationStore.error(error.value)
+            console.error('Error al cargar documentos:', err)
+            error.value = err.message || 'Error al cargar los documentos'
+            notificationStore.error(error.value, 'Error')
         } finally {
             cargando.value = false
         }
     }
 
     const actualizarFiltros = (nuevosFiltros) => {
-        filtros.value = { ...filtros.value, ...nuevosFiltros }
+        filtros.value = { ...nuevosFiltros }
     }
 
     const limpiarFiltros = () => {
         filtros.value = {
-            busqueda: "",
-            tipo: "",
-            fechaDesde: "",
-            fechaHasta: "",
-            activos: true,
-            archivados: false,
+            busqueda: '',
+            tipo: '',
+            fechaDesde: '',
+            fechaHasta: ''
         }
     }
 
     const previsualizarDocumento = async (documento) => {
         if (!documento) return
 
+        if (documentoPreview.value && documentoPreview.value.id_documento === documento.id_documento) {
+            console.log('El documento ya está siendo previsualizado')
+            return
+        }
+
+        if (previewEnProceso.value) {
+            console.log('Ya hay una previsualización en proceso, ignorando solicitud')
+            return
+        }
+
+        previewEnProceso.value = true
         documentoPreview.value = documento
         cargandoPreview.value = true
         errorPreview.value = null
         urlPreview.value = null
 
         try {
-            // Obtener la URL de vista previa directamente del store
+            console.log(`Solicitando previsualización para documento ID: ${documento.id_documento}`)
             const url = await documentosStore.previewDocumento(documento.id_documento)
 
             if (!url) {
-                throw new Error("No se pudo generar la URL de previsualización")
+                throw new Error('No se pudo generar la URL de previsualización')
             }
 
+            console.log("URL de previsualización recibida:", url)
             urlPreview.value = url
-        } catch (error) {
-            console.error("Error al obtener vista previa:", error)
-            errorPreview.value = error.message || "No se pudo cargar la vista previa del documento"
-            notificationStore.warning(errorPreview.value, "Error de previsualización")
+        } catch (err) {
+            console.error('Error al obtener vista previa:', err)
+
+            let mensajeError = err.message || 'No se pudo cargar la vista previa del documento'
+
+            if (err.response) {
+                const status = err.response.status
+                if (status === 404) {
+                    mensajeError = 'El documento solicitado no existe o no está disponible'
+                } else if (status === 403) {
+                    mensajeError = 'No tiene permisos para ver este documento'
+                } else {
+                    mensajeError = `Error del servidor (${status}): ${err.response.statusText}`
+                }
+            }
+
+            errorPreview.value = mensajeError
+            notificationStore.warning(errorPreview.value, 'Error de previsualización')
         } finally {
             cargandoPreview.value = false
+
+            previewTimeoutId.value = setTimeout(() => {
+                previewEnProceso.value = false
+            }, 300)
         }
     }
 
     const cerrarPreview = () => {
         if (urlPreview.value) {
+            console.log("Liberando recursos de previsualización:", urlPreview.value)
             URL.revokeObjectURL(urlPreview.value)
         }
         documentoPreview.value = null
         urlPreview.value = null
         errorPreview.value = null
+
+        previewEnProceso.value = false
+
+        if (previewTimeoutId.value) {
+            clearTimeout(previewTimeoutId.value)
+            previewTimeoutId.value = null
+        }
     }
 
     const descargarDocumento = async (documento) => {
@@ -157,64 +165,64 @@ export function useDocumentos(idEmpleado = null) {
 
         try {
             await documentosStore.downloadDocumento(documento.id_documento)
-        } catch (error) {
-            console.error("Error al descargar documento:", error)
+        } catch (err) {
+            console.error('Error al descargar documento:', err)
             notificationStore.error(
-                error.message || "Ha ocurrido un error al descargar el documento",
-                "Error al descargar"
+                err.message || 'Ha ocurrido un error al descargar el documento',
+                'Error al descargar'
             )
         }
     }
 
-    const formatearFecha = (fechaString) => {
-        if (!fechaString) return "Fecha desconocida"
+    const formatDate = (dateString) => {
+        if (!dateString) return '-'
 
-        const fecha = new Date(fechaString)
-        return fecha.toLocaleDateString('es-ES', {
+        const date = new Date(dateString)
+        return date.toLocaleDateString('es-ES', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric'
         })
     }
 
-    const formatearTamano = (bytes) => {
-        if (!bytes || bytes === 0) return "Desconocido"
+    const getFileIcon = (fileName) => {
+        if (!fileName) return 'File'
 
-        const unidades = ['B', 'KB', 'MB', 'GB']
-        const i = Math.floor(Math.log(bytes) / Math.log(1024))
+        fileName = fileName.toLowerCase()
 
-        return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${unidades[i]}`
-    }
+        if (/\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName)) {
+            return 'FileImage'
+        }
 
-    const obtenerIconoPorTipo = (tipo) => {
-        if (!tipo) return 'File'
+        if (/\.(pdf|doc|docx|txt|rtf)$/i.test(fileName)) {
+            return 'FileText'
+        }
 
-        const tipoLower = tipo.toLowerCase()
-
-        if (tipoLower.includes('contrato')) return 'FileText'
-        if (tipoLower.includes('cv') || tipoLower.includes('curriculum')) return 'FileText'
-        if (tipoLower.includes('dni') || tipoLower.includes('nie')) return 'FileText'
-        if (tipoLower.includes('nomina')) return 'FileSpreadsheet'
-        if (tipoLower.includes('seguridad')) return 'FileText'
-        if (tipoLower.includes('titulacion')) return 'FileText'
-        if (tipoLower.includes('pdf')) return 'FileText'
-        if (tipoLower.includes('imagen') || /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(tipoLower)) return 'FileImage'
+        if (/\.(xls|xlsx|csv)$/i.test(fileName)) {
+            return 'FileSpreadsheet'
+        }
 
         return 'File'
     }
 
-    if (idEmpleado) {
-        cargarDocumentos()
+    watch(() => idEmpleado, (newId) => {
+        if (newId) {
+            cargarDocumentos()
+        }
+    }, { immediate: true })
 
-        watch(() => idEmpleado, (nuevoId) => {
-            if (nuevoId) {
-                cargarDocumentos()
-            }
-        })
-    }
+    onBeforeUnmount(() => {
+        if (urlPreview.value) {
+            URL.revokeObjectURL(urlPreview.value)
+        }
+
+        if (previewTimeoutId.value) {
+            clearTimeout(previewTimeoutId.value)
+        }
+    })
 
     return {
-        documentos: computed(() => documentosStore.documentos || []),
+        documentos,
         documentosFiltrados,
         cargando,
         error,
@@ -223,8 +231,8 @@ export function useDocumentos(idEmpleado = null) {
         urlPreview,
         cargandoPreview,
         errorPreview,
-        esPDF,
-        esImagen,
+        previewEnProceso,
+        tiposDocumento,
 
         cargarDocumentos,
         actualizarFiltros,
@@ -232,8 +240,7 @@ export function useDocumentos(idEmpleado = null) {
         previsualizarDocumento,
         cerrarPreview,
         descargarDocumento,
-        formatearFecha,
-        formatearTamano,
-        obtenerIconoPorTipo
+        formatDate,
+        getFileIcon
     }
 }

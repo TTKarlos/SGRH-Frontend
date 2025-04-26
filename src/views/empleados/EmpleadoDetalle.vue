@@ -76,9 +76,6 @@
           <!-- Documentos -->
           <div v-if="activeTab === 'documentos' && canViewDocuments" class="tab-panel">
             <div class="card">
-              <div class="card-header">
-                <h2>Documentos</h2>
-              </div>
               <div class="card-body">
                 <DocumentosEmpleado
                     v-if="empleado"

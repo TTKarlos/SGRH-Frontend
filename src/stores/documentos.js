@@ -116,6 +116,25 @@ export const useDocumentosStore = defineStore("documentos", {
             const notificationStore = useNotificationStore();
 
             try {
+                if (!formData.get('archivo')) {
+                    throw new Error('Debe seleccionar un archivo');
+                }
+
+                if (!formData.get('nombre')) {
+                    throw new Error('El nombre del documento es obligatorio');
+                }
+
+                if (!formData.get('tipo_documento')) {
+                    throw new Error('El tipo de documento es obligatorio');
+                }
+
+                if (!formData.get('id_empleado')) {
+                    throw new Error('El ID del empleado es obligatorio');
+                }
+
+                const idEmpleado = formData.get('id_empleado');
+                formData.set('id_empleado', String(idEmpleado));
+
                 const response = await documentosApi.upload(formData);
 
                 if (response.data.success) {
@@ -128,19 +147,27 @@ export const useDocumentosStore = defineStore("documentos", {
                 const errorMsg = error.response?.data?.message || error.message || "Error al subir documento";
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
-                return null;
+                throw error;
             } finally {
                 this.loading = false;
             }
         },
 
-        async updateDocumento(id, formData) {
+        async updateDocumento(id, data) {
             this.loading = true;
             this.error = null;
             const notificationStore = useNotificationStore();
 
             try {
-                const response = await documentosApi.update(id, formData);
+                if (!data.nombre) {
+                    throw new Error('El nombre del documento es obligatorio');
+                }
+
+                if (!data.tipo_documento) {
+                    throw new Error('El tipo de documento es obligatorio');
+                }
+
+                const response = await documentosApi.updateMetadata(id, data);
 
                 if (response.data.success) {
                     notificationStore.success("Documento actualizado correctamente");
@@ -162,7 +189,60 @@ export const useDocumentosStore = defineStore("documentos", {
                 const errorMsg = error.response?.data?.message || error.message || "Error al actualizar documento";
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
-                return null;
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async updateDocumentoWithFile(id, formData) {
+            this.loading = true;
+            this.error = null;
+            const notificationStore = useNotificationStore();
+
+            try {
+                if (!formData.get('archivo')) {
+                    throw new Error('Debe seleccionar un archivo');
+                }
+
+                if (!formData.get('nombre')) {
+                    throw new Error('El nombre del documento es obligatorio');
+                }
+
+                if (!formData.get('tipo_documento')) {
+                    throw new Error('El tipo de documento es obligatorio');
+                }
+
+                if (!formData.get('id_empleado')) {
+                    throw new Error('El ID del empleado es obligatorio');
+                }
+
+                const idEmpleado = formData.get('id_empleado');
+                formData.set('id_empleado', String(idEmpleado));
+
+                const response = await documentosApi.updateWithFile(id, formData);
+
+                if (response.data.success) {
+                    notificationStore.success("Documento actualizado correctamente");
+
+                    if (this.currentDocumento && this.currentDocumento.id_documento === id) {
+                        this.currentDocumento = response.data.data.documento;
+                    }
+
+                    const index = this.documentos.findIndex(d => d.id_documento === id);
+                    if (index !== -1) {
+                        this.documentos[index] = response.data.data.documento;
+                    }
+
+                    return response.data.data.documento;
+                } else {
+                    throw new Error(response.data.message || "Error al actualizar documento");
+                }
+            } catch (error) {
+                const errorMsg = error.response?.data?.message || error.message || "Error al actualizar documento";
+                this.error = errorMsg;
+                notificationStore.error(errorMsg);
+                throw error;
             } finally {
                 this.loading = false;
             }
@@ -193,7 +273,7 @@ export const useDocumentosStore = defineStore("documentos", {
                 const errorMsg = error.response?.data?.message || error.message || "Error al eliminar documento";
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
-                return false;
+                throw error;
             } finally {
                 this.loading = false;
             }
@@ -204,37 +284,127 @@ export const useDocumentosStore = defineStore("documentos", {
             const notificationStore = useNotificationStore();
 
             try {
+                const documento = await this._obtenerDocumento(id);
+
                 const response = await documentosApi.download(id);
 
-                const url = window.URL.createObjectURL(new Blob([response.data]));
+                const contentType = response.headers['content-type'] || 'application/octet-stream';
 
-                let filename = 'documento.pdf';
-                const contentDisposition = response.headers['content-disposition'];
-                if (contentDisposition) {
-                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-                    if (filenameMatch.length === 2) {
-                        filename = filenameMatch[1];
-                    }
-                }
+                const filename = this._determinarNombreArchivo(documento, response.headers, contentType);
 
-                const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', filename);
-                document.body.appendChild(link);
-                link.click();
-
-                link.parentNode.removeChild(link);
-                window.URL.revokeObjectURL(url);
+                await this._ejecutarDescarga(response.data, contentType, filename);
 
                 return true;
             } catch (error) {
                 const errorMsg = error.response?.data?.message || error.message || "Error al descargar documento";
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
-                return false;
+                throw error;
             }
         },
 
+        async _obtenerDocumento(id) {
+            const docIndex = this.documentos.findIndex(d => d.id_documento === id);
+            if (docIndex !== -1) {
+                return this.documentos[docIndex];
+            }
+
+            if (this.currentDocumento?.id_documento === id) {
+                return this.currentDocumento;
+            }
+
+            try {
+                const docResponse = await documentosApi.getById(id);
+                if (docResponse.data.success) {
+                    return docResponse.data.data.documento;
+                }
+            } catch (e) {
+            }
+
+            throw new Error("No se pudo obtener la información del documento");
+        },
+
+        _determinarNombreArchivo(documento, headers, contentType) {
+            const contentDisposition = headers['content-disposition'];
+            if (contentDisposition) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(contentDisposition);
+                if (matches != null && matches[1]) {
+                    return matches[1].replace(/['"]/g, '');
+                }
+            }
+
+            const mimeToExt = {
+                'image/jpeg': '.jpg',
+                'image/jpg': '.jpg',
+                'image/png': '.png',
+                'image/gif': '.gif',
+                'image/bmp': '.bmp',
+                'image/webp': '.webp',
+                'image/tiff': '.tiff',
+                'image/svg+xml': '.svg',
+                'application/pdf': '.pdf',
+                'application/msword': '.doc',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+                'application/vnd.ms-excel': '.xls',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+                'application/vnd.ms-powerpoint': '.ppt',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+                'text/plain': '.txt',
+                'text/html': '.html',
+                'text/css': '.css',
+                'text/javascript': '.js',
+                'application/zip': '.zip',
+                'application/x-rar-compressed': '.rar',
+                'application/x-7z-compressed': '.7z',
+                'application/gzip': '.gz',
+                'application/json': '.json',
+                'application/xml': '.xml'
+            };
+
+            let extension = '.pdf';
+
+            if (contentType && mimeToExt[contentType]) {
+                extension = mimeToExt[contentType];
+            } else if (documento.nombre_original) {
+                const lastDotIndex = documento.nombre_original.lastIndexOf('.');
+                if (lastDotIndex > 0) {
+                    extension = documento.nombre_original.substring(lastDotIndex);
+                }
+            }
+
+            let filename = documento.nombre || 'documento';
+
+            if (filename.lastIndexOf('.') > 0) {
+                filename = filename.substring(0, filename.lastIndexOf('.')) + extension;
+            } else {
+                filename += extension;
+            }
+
+            return filename || 'documento.pdf';
+        },
+
+        _ejecutarDescarga(data, contentType, filename) {
+            return new Promise((resolve) => {
+                const blob = new Blob([data], { type: contentType });
+
+                const url = window.URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.style.display = 'none';
+
+                document.body.appendChild(link);
+                link.click();
+
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    resolve();
+                }, 150);
+            });
+        },
         async previewDocumento(id) {
             this.error = null;
             const notificationStore = useNotificationStore();
@@ -249,7 +419,7 @@ export const useDocumentosStore = defineStore("documentos", {
                 const errorMsg = error.response?.data?.message || error.message || "Error al previsualizar documento";
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
-                return null;
+                throw error;
             }
         },
 

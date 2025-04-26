@@ -1,233 +1,312 @@
 <template>
-  <div class="modal-backdrop">
-    <div class="modal-container">
+  <div class="modal-backdrop" @click.self="cerrarModal">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Editar documento</h3>
-        <button @click="$emit('cerrar')" class="modal-close">
+        <h3>Editar documento</h3>
+        <button class="btn-close" @click="cerrarModal">
           <X size="20" />
         </button>
       </div>
 
       <div class="modal-body">
-        <form @submit.prevent="guardarCambios">
-          <!-- Campo de nombre -->
+        <form @submit.prevent="handleSubmit">
           <div class="form-group">
-            <label for="nombre" class="form-label">Nombre del documento *</label>
+            <label for="nombre">Nombre del documento *</label>
             <input
                 type="text"
                 id="nombre"
-                v-model="documentoLocal.nombre"
-                class="form-input"
-                :class="{ 'input-error': erroresValidacion.nombre }"
-                placeholder="Ej: Contrato laboral"
+                v-model="formData.nombre"
+                class="form-control"
+                :class="{ 'is-invalid': erroresValidacion.nombre }"
+                placeholder="Nombre del documento"
             />
-            <p v-if="erroresValidacion.nombre" class="error-message">
+            <div v-if="erroresValidacion.nombre" class="invalid-feedback">
               {{ erroresValidacion.nombre }}
-            </p>
+            </div>
           </div>
 
-          <!-- Campo de tipo de documento -->
           <div class="form-group">
-            <label for="tipo_documento" class="form-label">Tipo de documento *</label>
+            <label for="tipo_documento">Tipo de documento *</label>
             <select
                 id="tipo_documento"
-                v-model="documentoLocal.tipo_documento"
-                class="form-select"
-                :class="{ 'input-error': erroresValidacion.tipo }"
+                v-model="formData.tipo_documento"
+                class="form-control"
+                :class="{ 'is-invalid': erroresValidacion.tipo }"
             >
               <option value="">Seleccione un tipo</option>
-              <option value="CONTRATO">Contrato</option>
-              <option value="NOMINA">Nómina</option>
-              <option value="CURRICULUM">Currículum</option>
-              <option value="DNI">DNI/NIE</option>
-              <option value="CERTIFICADO">Certificado</option>
-              <option value="OTROS">Otros</option>
+              <option v-for="tipo in tiposDocumento" :key="tipo" :value="tipo">
+                {{ tipo }}
+              </option>
             </select>
-            <p v-if="erroresValidacion.tipo" class="error-message">
+            <div v-if="erroresValidacion.tipo" class="invalid-feedback">
               {{ erroresValidacion.tipo }}
-            </p>
+            </div>
           </div>
 
-          <!-- Campo de observaciones -->
           <div class="form-group">
-            <label for="observaciones" class="form-label">Observaciones</label>
+            <label for="observaciones">Observaciones</label>
             <textarea
                 id="observaciones"
-                v-model="documentoLocal.observaciones"
-                class="form-textarea"
-                placeholder="Añada información adicional sobre el documento"
+                v-model="formData.observaciones"
+                class="form-control"
+                placeholder="Observaciones (opcional)"
                 rows="3"
             ></textarea>
           </div>
 
-          <!-- Información del archivo actual -->
           <div class="form-group">
-            <label class="form-label">Archivo actual</label>
-            <div class="file-info-box">
-              <div class="file-info">
-                <FileText size="24" />
-                <div class="file-details">
-                  <p class="file-name">{{ documentoLocal.nombre_original || 'Documento' }}</p>
-                  <p class="file-size" v-if="documentoLocal.tamano">
-                    {{ formatearTamano(documentoLocal.tamano) }}
-                  </p>
-                </div>
-              </div>
+            <label>Archivo actual</label>
+            <div class="current-file">
+              <FileText size="20" class="file-icon" />
+              <span class="file-name">{{ documento.nombre_original }}</span>
+              <button
+                  type="button"
+                  class="btn-preview"
+                  @click="previsualizarDocumento"
+              >
+                <Eye size="16" /> Ver
+              </button>
             </div>
           </div>
 
-          <!-- Área para reemplazar archivo -->
           <div class="form-group">
-            <label class="form-label">Reemplazar archivo (opcional)</label>
+            <label>Reemplazar archivo (opcional)</label>
             <div
                 class="file-drop-area"
                 :class="{
-                'dragging': arrastrandoArchivo,
-                'has-file': archivoSeleccionado,
+                'is-dragover': isDragOver,
+                'has-file': !!archivoSeleccionado,
+                'is-invalid': erroresValidacion.archivo
               }"
-                @dragover.prevent="activarArrastre"
-                @dragleave.prevent="desactivarArrastre"
-                @drop.prevent="soltarArchivo"
+                @dragover.prevent="handleDragOver"
+                @dragleave.prevent="handleDragLeave"
+                @drop.prevent="handleDrop"
             >
-              <div v-if="!archivoSeleccionado" class="file-drop-message">
+              <div v-if="!archivoSeleccionado" class="file-message">
                 <Upload size="24" />
-                <p>Arrastra un archivo aquí o</p>
-                <label for="file-input-edit" class="file-select-button">
-                  selecciona un archivo
-                  <input
-                      type="file"
-                      id="file-input-edit"
-                      ref="fileInput"
-                      @change="seleccionarArchivo"
-                      class="hidden-file-input"
-                  />
-                </label>
+                <p>Arrastra un archivo aquí o haz clic para seleccionarlo</p>
+                <span class="file-formats">
+                  Formatos permitidos: PDF, DOC, DOCX, JPG, PNG
+                </span>
               </div>
 
               <div v-else class="file-preview">
                 <div class="file-info">
-                  <FileText size="24" />
+                  <FileText size="24" class="file-icon" />
                   <div class="file-details">
-                    <p class="file-name">{{ archivoSeleccionado.name }}</p>
-                    <p class="file-size">{{ formatearTamano(archivoSeleccionado.size) }}</p>
+                    <span class="file-name">{{ archivoSeleccionado.name }}</span>
+                    <span class="file-size">
+                      {{ formatFileSize(archivoSeleccionado.size) }}
+                    </span>
                   </div>
                 </div>
-                <button type="button" @click="eliminarArchivo" class="file-remove-button">
+                <button
+                    type="button"
+                    class="btn-remove-file"
+                    @click="eliminarArchivo"
+                >
                   <X size="16" />
                 </button>
               </div>
+
+              <input
+                  type="file"
+                  ref="fileInput"
+                  class="file-input"
+                  @change="handleFileSelect"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              />
+            </div>
+            <div v-if="erroresValidacion.archivo" class="invalid-feedback">
+              {{ erroresValidacion.archivo }}
             </div>
           </div>
-        </form>
-      </div>
 
-      <div class="modal-footer">
-        <button @click="$emit('cerrar')" class="btn btn-secondary">Cancelar</button>
-        <button
-            @click="guardarCambios"
-            class="btn btn-primary"
-            :disabled="guardando"
-        >
-          <Loader v-if="guardando" size="16" class="animate-spin mr-2" />
-          {{ guardando ? 'Guardando...' : 'Guardar cambios' }}
-        </button>
+          <div class="form-actions">
+            <button
+                type="button"
+                class="btn btn-secondary"
+                @click="cerrarModal"
+                :disabled="guardando"
+            >
+              Cancelar
+            </button>
+            <button
+                type="submit"
+                class="btn btn-primary"
+                :disabled="guardando"
+            >
+              <Loader2 v-if="guardando" size="16" class="spinner" />
+              <span v-else>Guardar cambios</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { X, Save, Loader, Upload, FileText } from "lucide-vue-next"
-import { formatUtils } from "../../../utils/formatUtils"
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { X, FileText, Upload, Eye, Loader2 } from 'lucide-vue-next'
 
 export default {
-  name: "DocumentoModalEdicion",
+  name: 'DocumentoModalEdicion',
 
   components: {
     X,
-    Save,
-    Loader,
-    Upload,
     FileText,
+    Upload,
+    Eye,
+    Loader2
   },
 
   props: {
     documento: {
       type: Object,
-      required: true,
+      required: true
     },
     erroresValidacion: {
       type: Object,
-      default: () => ({}),
+      default: () => ({})
     },
     guardando: {
       type: Boolean,
-      default: false,
-    },
-  },
-
-  data() {
-    return {
-      documentoLocal: { ...this.documento },
-      archivoSeleccionado: null,
-      arrastrandoArchivo: false,
+      default: false
     }
   },
 
-  watch: {
-    documento(newVal) {
-      this.documentoLocal = { ...newVal }
-    },
-  },
+  emits: ['cerrar', 'guardar', 'guardar-con-archivo'],
 
-  methods: {
-    activarArrastre() {
-      this.arrastrandoArchivo = true
-    },
+  setup(props, { emit }) {
+    const formData = reactive({
+      id_documento: null,
+      nombre: '',
+      tipo_documento: '',
+      observaciones: '',
+      id_empleado: null
+    })
 
-    desactivarArrastre() {
-      this.arrastrandoArchivo = false
-    },
+    const fileInput = ref(null)
+    const archivoSeleccionado = ref(null)
+    const isDragOver = ref(false)
 
-    seleccionarArchivo(event) {
-      const archivo = event.target.files[0]
-      if (archivo) {
-        this.archivoSeleccionado = archivo
-      }
-    },
+    const tiposDocumento = [
+      'Contrato',
+      'Nómina',
+      'Curriculum',
+      'DNI/NIE',
+      'Seguridad Social',
+      'Certificado',
+      'Título',
+      'Otro'
+    ]
 
-    soltarArchivo(event) {
-      this.arrastrandoArchivo = false
-      const archivo = event.dataTransfer.files[0]
-      if (archivo) {
-        this.archivoSeleccionado = archivo
-      }
-    },
+    const inicializarFormulario = () => {
+      formData.id_documento = props.documento.id_documento
+      formData.nombre = props.documento.nombre || ''
+      formData.tipo_documento = props.documento.tipo_documento || ''
+      formData.observaciones = props.documento.observaciones || ''
+      formData.id_empleado = props.documento.id_empleado || null
 
-    eliminarArchivo() {
-      this.archivoSeleccionado = null
-      this.$refs.fileInput.value = ""
-    },
+      console.log("Formulario inicializado con ID de empleado:", formData.id_empleado)
+    }
 
-    guardarCambios() {
+    const handleSubmit = () => {
+      if (archivoSeleccionado.value) {
+        const formDataObj = new FormData()
+        formDataObj.append('archivo', archivoSeleccionado.value)
+        formDataObj.append('nombre', formData.nombre)
+        formDataObj.append('tipo_documento', formData.tipo_documento)
+        formDataObj.append('observaciones', formData.observaciones || '')
 
-      if (this.archivoSeleccionado) {
-        const formData = new FormData()
-        formData.append("archivo", this.archivoSeleccionado)
-        formData.append("nombre", this.documentoLocal.nombre)
-        formData.append("tipo_documento", this.documentoLocal.tipo_documento)
-        formData.append("observaciones", this.documentoLocal.observaciones || "")
+        if (formData.id_empleado) {
+          formDataObj.append('id_empleado', String(formData.id_empleado))
+        }
 
-        this.$emit("guardar-con-archivo", formData, this.documentoLocal.id_documento)
+        console.log("Enviando FormData para actualización con archivo:");
+        for (let [key, value] of formDataObj.entries()) {
+          console.log(`- ${key}:`, key === 'archivo' ? `Archivo: ${value.name} (${value.size} bytes)` : value);
+        }
+
+        emit('guardar-con-archivo', formDataObj, formData.id_documento)
       } else {
-        this.$emit("guardar", this.documentoLocal)
+        console.log("Enviando datos para actualización sin archivo:", formData);
+        emit('guardar', { ...formData })
       }
-    },
+    }
 
-    formatearTamano(bytes) {
-      return formatUtils.formatearTamano(bytes)
-    },
-  },
+    const handleFileSelect = (event) => {
+      const files = event.target.files
+      if (files.length > 0) {
+        archivoSeleccionado.value = files[0]
+      }
+    }
+
+    const handleDragOver = () => {
+      isDragOver.value = true
+    }
+
+    const handleDragLeave = () => {
+      isDragOver.value = false
+    }
+
+    const handleDrop = (event) => {
+      isDragOver.value = false
+      const files = event.dataTransfer.files
+      if (files.length > 0) {
+        archivoSeleccionado.value = files[0]
+      }
+    }
+
+    const eliminarArchivo = () => {
+      archivoSeleccionado.value = null
+      if (fileInput.value) {
+        fileInput.value.value = ''
+      }
+    }
+
+    const previsualizarDocumento = () => {
+      console.log("Solicitando previsualización del documento:", props.documento.id_documento);
+    }
+
+    const cerrarModal = () => {
+      emit('cerrar')
+    }
+
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+    }
+
+    onMounted(() => {
+      inicializarFormulario()
+    })
+
+    watch(() => props.documento, () => {
+      inicializarFormulario()
+    }, { deep: true })
+
+    return {
+      formData,
+      fileInput,
+      archivoSeleccionado,
+      isDragOver,
+      tiposDocumento,
+      handleSubmit,
+      handleFileSelect,
+      handleDragOver,
+      handleDragLeave,
+      handleDrop,
+      eliminarArchivo,
+      previsualizarDocumento,
+      cerrarModal,
+      formatFileSize
+    }
+  }
 }
 </script>
 
@@ -242,115 +321,134 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
+  z-index: 1000;
 }
 
-.modal-container {
+.modal-content {
   background-color: white;
   border-radius: 0.5rem;
-  width: 100%;
+  width: 90%;
   max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.modal-title {
+.modal-header h3 {
+  margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #111827;
-  margin: 0;
 }
 
-.modal-close {
+.btn-close {
   background: transparent;
   border: none;
   color: #6b7280;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.25rem;
 }
 
-.modal-close:hover {
-  color: #111827;
+.btn-close:hover {
   background-color: #f3f4f6;
+  color: #dc2626;
 }
 
 .modal-body {
-  padding: 1.5rem;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  padding: 1rem;
 }
 
 .form-group {
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
-.form-label {
+.form-group label {
   display: block;
-  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
   font-weight: 500;
   color: #374151;
-  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
 }
 
-.form-input,
-.form-select,
-.form-textarea {
+.form-control {
   width: 100%;
   padding: 0.5rem 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   font-size: 0.875rem;
-  color: #111827;
-  background-color: white;
+  transition: border-color 0.15s ease-in-out;
 }
 
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
+.form-control:focus {
   outline: none;
   border-color: #dc2626;
-  box-shadow: 0 0 0 1px #dc2626;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.1);
 }
 
-.form-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.input-error {
+.form-control.is-invalid {
   border-color: #dc2626;
 }
 
-.error-message {
+.invalid-feedback {
   color: #dc2626;
   font-size: 0.75rem;
   margin-top: 0.25rem;
 }
 
-.file-info-box {
-  border: 1px solid #d1d5db;
-  border-radius: 0.375rem;
-  padding: 0.75rem;
+.current-file {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
   background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+}
+
+.file-icon {
+  color: #dc2626;
+  margin-right: 0.5rem;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #4b5563;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-preview {
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+  border: none;
+  color: #4b5563;
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.btn-preview:hover {
+  background-color: #f3f4f6;
+  color: #dc2626;
+}
+
+.btn-preview svg {
+  margin-right: 0.25rem;
 }
 
 .file-drop-area {
@@ -360,13 +458,14 @@ export default {
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .file-drop-area:hover {
   border-color: #9ca3af;
 }
 
-.file-drop-area.dragging {
+.file-drop-area.is-dragover {
   border-color: #dc2626;
   background-color: rgba(220, 38, 38, 0.05);
 }
@@ -376,26 +475,29 @@ export default {
   background-color: rgba(16, 185, 129, 0.05);
 }
 
-.file-drop-message {
+.file-drop-area.is-invalid {
+  border-color: #dc2626;
+}
+
+.file-message {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
   color: #6b7280;
 }
 
-.file-drop-message svg {
+.file-message svg {
+  margin-bottom: 0.5rem;
+}
+
+.file-message p {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.875rem;
+}
+
+.file-formats {
+  font-size: 0.75rem;
   color: #9ca3af;
-}
-
-.file-select-button {
-  color: #dc2626;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.hidden-file-input {
-  display: none;
 }
 
 .file-preview {
@@ -407,45 +509,59 @@ export default {
 .file-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.file-info svg {
-  color: #6b7280;
 }
 
 .file-details {
+  display: flex;
+  flex-direction: column;
+  margin-left: 0.5rem;
   text-align: left;
 }
 
-.file-name {
+.file-details .file-name {
+  font-size: 0.875rem;
   font-weight: 500;
   color: #111827;
-  margin: 0;
-  word-break: break-all;
+  margin-bottom: 0.125rem;
 }
 
-.file-size {
-  color: #6b7280;
+.file-details .file-size {
   font-size: 0.75rem;
-  margin: 0;
+  color: #6b7280;
 }
 
-.file-remove-button {
-  background: transparent;
+.btn-remove-file {
+  background-color: transparent;
   border: none;
   color: #6b7280;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.25rem;
 }
 
-.file-remove-button:hover {
-  color: #dc2626;
+.btn-remove-file:hover {
   background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
 }
 
 .btn {
@@ -461,6 +577,16 @@ export default {
   border: none;
 }
 
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
 .btn-primary {
   background-color: #dc2626;
   color: white;
@@ -470,26 +596,13 @@ export default {
   background-color: #b91c1c;
 }
 
-.btn-primary:disabled {
+.btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.btn-secondary {
-  background-color: #f3f4f6;
-  color: #374151;
-}
-
-.btn-secondary:hover {
-  background-color: #e5e7eb;
-}
-
-.animate-spin {
+.spinner {
   animation: spin 1s linear infinite;
-}
-
-.mr-2 {
-  margin-right: 0.5rem;
 }
 
 @keyframes spin {

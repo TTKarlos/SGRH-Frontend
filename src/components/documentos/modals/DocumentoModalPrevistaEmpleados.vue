@@ -1,9 +1,9 @@
 <template>
-  <div class="modal-backdrop">
-    <div class="modal-container">
+  <div class="modal-backdrop" @click.self="cerrarModal">
+    <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Vista previa del documento</h3>
-        <button @click="$emit('cerrar')" class="modal-close">
+        <h3>{{ documento.nombre }}</h3>
+        <button class="btn-close" @click="cerrarModal">
           <X size="20" />
         </button>
       </div>
@@ -11,28 +11,29 @@
       <div class="modal-body">
         <!-- Estado de carga -->
         <div v-if="cargando" class="preview-loading">
-          <Loader size="32" class="animate-spin" />
-          <p>Cargando vista previa...</p>
+          <LoadingSpinner message="Cargando documento..." />
         </div>
 
         <!-- Estado de error -->
         <div v-else-if="error" class="preview-error">
-          <AlertTriangle size="32" />
-          <p>{{ error }}</p>
+          <div class="error-message">
+            <AlertTriangle size="24" />
+            <p>{{ error }}</p>
+          </div>
         </div>
 
-        <!-- Vista previa del documento -->
-        <div v-else-if="url" class="preview-content">
-          <!-- Vista previa para PDF -->
+        <!-- Previsualización -->
+        <div v-else-if="url" class="preview-container">
+          <!-- Previsualización de PDF -->
           <iframe
-              v-if="isPDF"
+              v-if="isPdf"
               :src="url"
               class="pdf-preview"
               frameborder="0"
               title="Vista previa del documento"
           ></iframe>
 
-          <!-- Vista previa para imágenes -->
+          <!-- Previsualización de imagen -->
           <img
               v-else-if="isImage"
               :src="url"
@@ -42,31 +43,54 @@
 
           <!-- Mensaje para otros tipos de archivo -->
           <div v-else class="unsupported-preview">
-            <FileText size="48" />
-            <p>Este tipo de documento no se puede previsualizar.</p>
-            <p>Puede descargar el documento para verlo.</p>
+            <FileText size="48" class="file-icon" />
+            <p>
+              Este tipo de archivo no se puede previsualizar directamente.
+              <br />
+              Puede descargar el archivo para verlo.
+            </p>
           </div>
         </div>
 
-        <!-- Sin URL de vista previa -->
+        <!-- Sin URL -->
         <div v-else class="preview-error">
-          <AlertTriangle size="32" />
-          <p>No se pudo generar la vista previa del documento.</p>
+          <div class="error-message">
+            <AlertTriangle size="24" />
+            <p>No se pudo generar la vista previa del documento.</p>
+          </div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button @click="$emit('cerrar')" class="btn btn-secondary">
-          Cerrar
-        </button>
-        <button
-            v-if="documento && canDownloadDocuments"
-            @click="$emit('descargar', documento)"
-            class="btn btn-primary"
-        >
-          <Download size="16" class="btn-icon" />
-          Descargar
-        </button>
+        <div class="documento-info">
+          <div class="info-item">
+            <span class="info-label">Tipo:</span>
+            <span class="info-value">{{ documento.tipo_documento }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Subido:</span>
+            <span class="info-value">{{ formatDate(documento.fecha_subida) }}</span>
+          </div>
+          <div v-if="documento.observaciones" class="info-item">
+            <span class="info-label">Observaciones:</span>
+            <span class="info-value">{{ documento.observaciones }}</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button
+              class="btn btn-secondary"
+              @click="cerrarModal"
+          >
+            Cerrar
+          </button>
+          <button
+              class="btn btn-primary"
+              @click="descargar"
+          >
+            <Download size="16" class="btn-icon" />
+            Descargar
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -74,18 +98,18 @@
 
 <script>
 import { computed } from 'vue'
-import { X, Loader, AlertTriangle, FileText, Download } from 'lucide-vue-next'
-import { useAuthStore } from '../../../stores/auth'
+import { X, AlertTriangle, FileText, Download } from 'lucide-vue-next'
+import LoadingSpinner from "@/components/common/LoadingSpinner.vue"
 
 export default {
-  name: 'DocumentoModalPrevista',
+  name: 'DocumentoModalPrevistaEmpleados',
 
   components: {
     X,
-    Loader,
     AlertTriangle,
     FileText,
-    Download
+    Download,
+    LoadingSpinner
   },
 
   props: {
@@ -95,7 +119,7 @@ export default {
     },
     url: {
       type: String,
-      default: ''
+      default: null
     },
     cargando: {
       type: Boolean,
@@ -109,35 +133,56 @@ export default {
 
   emits: ['cerrar', 'descargar'],
 
-  setup(props) {
-    const authStore = useAuthStore();
-
-    const canDownloadDocuments = computed(() => {
-      return authStore.hasPermission({ nombre: "Documentos", tipo: "Lectura" });
-    });
-
-    const isPDF = computed(() => {
+  setup(props, { emit }) {
+    const isPdf = computed(() => {
       if (!props.url) return false
 
-      if (props.url.includes('application/pdf')) return true
+      const fileName = props.documento.nombre_original?.toLowerCase() || ''
+      const mimeType = props.documento.mimetype?.toLowerCase() || ''
 
-      const nombreOriginal = props.documento?.nombre_original?.toLowerCase() || ''
-      return nombreOriginal.endsWith('.pdf')
+      return fileName.endsWith('.pdf') ||
+          mimeType.includes('application/pdf') ||
+          props.url.includes('application/pdf')
     })
 
     const isImage = computed(() => {
       if (!props.url) return false
 
-      if (props.url.includes('image/')) return true
+      const fileName = props.documento.nombre_original?.toLowerCase() || ''
+      const mimeType = props.documento.mimetype?.toLowerCase() || ''
 
-      const nombreOriginal = props.documento?.nombre_original?.toLowerCase() || ''
-      return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
+      return /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName) ||
+          mimeType.includes('image/') ||
+          props.url.includes('image/')
     })
 
+    const formatDate = (dateString) => {
+      if (!dateString) return '-'
+
+      const date = new Date(dateString)
+      return date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
+    const cerrarModal = () => {
+      emit('cerrar')
+    }
+
+    const descargar = () => {
+      emit('descargar', props.documento)
+    }
+
     return {
-      isPDF,
+      isPdf,
       isImage,
-      canDownloadDocuments
+      formatDate,
+      cerrarModal,
+      descargar
     }
   }
 }
@@ -154,101 +199,89 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 50;
-  backdrop-filter: blur(2px);
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
 }
 
-.modal-container {
+.modal-content {
   background-color: white;
   border-radius: 0.5rem;
   width: 90%;
   max-width: 800px;
-  height: 80vh;
-  max-height: 800px;
+  height: 90vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  animation: fadeIn 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #e5e7eb;
 }
 
-.modal-title {
+.modal-header h3 {
+  margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #111827;
-  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.modal-close {
+.btn-close {
   background: transparent;
   border: none;
   color: #6b7280;
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
 }
 
-.modal-close:hover {
-  color: #111827;
+.btn-close:hover {
   background-color: #f3f4f6;
+  color: #dc2626;
 }
 
 .modal-body {
   flex: 1;
-  padding: 1.5rem;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  position: relative;
 }
 
 .preview-loading,
-.preview-error,
-.unsupported-preview {
+.preview-error {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  text-align: center;
   height: 100%;
-  gap: 1rem;
-  color: #6b7280;
+  padding: 2rem;
+  text-align: center;
 }
 
-.preview-loading svg {
-  color: #dc2626;
-}
-
-.preview-error svg {
-  color: #dc2626;
-}
-
-.unsupported-preview svg {
-  color: #6b7280;
-}
-
-.preview-content {
-  flex: 1;
+.error-message {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+}
+
+.error-message svg {
+  color: #dc2626;
+  margin-bottom: 1rem;
+}
+
+.preview-container {
+  height: 100%;
   overflow: hidden;
 }
 
@@ -257,8 +290,68 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.25rem;
+}
+
+.unsupported-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+
+.unsupported-preview .file-icon {
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+.unsupported-preview p {
+  color: #4b5563;
+  margin: 0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.documento-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+.info-item {
+  display: flex;
+  font-size: 0.875rem;
+}
+
+.info-label {
+  font-weight: 600;
+  color: #4b5563;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+}
+
+.info-value {
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .btn {
@@ -274,6 +367,20 @@ export default {
   border: none;
 }
 
+.btn-icon {
+  margin-right: 0.5rem;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
 .btn-primary {
   background-color: #dc2626;
   color: white;
@@ -283,40 +390,25 @@ export default {
   background-color: #b91c1c;
 }
 
-.btn-secondary {
-  background-color: #f3f4f6;
-  color: #374151;
-}
-
-.btn-secondary:hover {
-  background-color: #e5e7eb;
-}
-
-.btn-icon {
-  margin-right: 0.5rem;
-}
-
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
   }
-  to {
-    opacity: 1;
-    transform: scale(1);
+
+  .modal-actions {
+    justify-content: flex-end;
   }
 }
 </style>
