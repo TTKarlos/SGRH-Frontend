@@ -12,11 +12,11 @@ export default {
     getByEmpleado(idEmpleado, params) {
         return api.get(`/documentos/empleado/${idEmpleado}`, { params });
     },
-
+ /*
     getByTipo(tipo, params) {
         return api.get(`/documentos/tipo/${tipo}`, { params });
     },
-
+*/
     upload(formData) {
         return api.post("/documentos/upload", formData, {
             headers: {

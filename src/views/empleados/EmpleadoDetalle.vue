@@ -106,10 +106,12 @@
               :loading="ausenciasStore.loading"
               :error="ausenciasStore.error"
               :canEdit="canEditAusencias"
+              :id_empleado="empleadoId"
               @add-ausencia="showAusenciaModal = true"
               @edit-ausencia="editAusencia"
               @delete-ausencia="deleteAusencia"
               @reload="loadAusencias"
+              @save-ausencia="saveAusencia"
           />
         </div>
       </div>
@@ -227,8 +229,11 @@
           :tiposAusencia="tiposAusenciaStore.tiposAusencia"
           :validationErrors="ausenciaValidationErrors"
           :loading="savingAusencia"
+          :id_empleado="empleadoId"
+          :ausencias-existentes="ausenciasStore.ausencias"
           @close="closeAusenciaModal"
           @save="saveAusencia"
+          @validation-error="handleAusenciaValidationError"
       />
 
       <!-- Modal de confirmación de eliminación de formación -->
@@ -306,13 +311,13 @@ import { useDepartamentosStore } from "../../stores/departamentos"
 import { useCentrosStore } from "../../stores/centros"
 import { useFormacionEmpleadosStore } from "../../stores/formacionEmpleados"
 import { useAusenciasStore } from "../../stores/ausencias"
-import { useTiposAusenciaStore } from "../../stores/tiposAusencia.js"
+import { useTiposAusenciaStore } from "../../stores/tiposAusencia"
 import { validateEmpleado } from "../../validation/empleadoSchema"
 import DefaultLayout from "../../layouts/DefaultLayout.vue"
 import LoadingSpinner from "../../components/common/LoadingSpinner.vue"
 import DocumentosEmpleado from "../../components/documentos/empleados/DocumentosEmpleado.vue"
 
-import EmpleadoHeader from "../../components/empleados/detalle/EmpleadoHeader.vue"
+import EmpleadoHeader from "../../components/empleados/EmpleadosHeader.vue"
 import EmpleadoTabs from "../../components/empleados/detalle/EmpleadoTabs.vue"
 import DatosPersonalesTab from "../../components/empleados/detalle/tabs/DatosPersonalesTab.vue"
 import InformacionLaboralTab from "../../components/empleados/detalle/tabs/InformacionLaboralTab.vue"
@@ -401,7 +406,8 @@ export default {
       ausenciaForm: {
         id_tipo_ausencia: null,
         fecha_inicio: '',
-        fecha_fin: ''
+        fecha_fin: '',
+        id_empleado: null
       },
       ausenciaValidationErrors: {},
       savingAusencia: false,
@@ -507,7 +513,6 @@ export default {
     loadEmpleado() {
       if (!this.empleadoId) return
 
-      console.log("Cargando empleado con ID:", this.empleadoId)
       this.empleadosStore.fetchEmpleadoById(this.empleadoId).then(() => {
         if (this.empleadosStore.currentEmpleado) {
           this.originalEmpleado = JSON.parse(JSON.stringify(this.empleadosStore.currentEmpleado))
@@ -608,7 +613,6 @@ export default {
     async toggleEmpleadoStatus() {
       try {
         const newStatus = !this.empleadosStore.currentEmpleado.activo
-        console.log(`Componente: Cambiando estado a ${newStatus ? 'activo' : 'inactivo'}`)
 
         const success = await this.empleadosStore.changeEmpleadoStatus(this.empleadoId, newStatus)
 
@@ -649,15 +653,12 @@ export default {
       this.urlPreview = null
 
       try {
-        console.log(`Solicitando previsualización para documento ID: ${documento.id_documento}`)
-
         const url = await this.documentosStore.previewDocumento(documento.id_documento)
 
         if (!url) {
           throw new Error("No se pudo generar la URL de previsualización")
         }
 
-        console.log("URL de previsualización recibida:", url)
         this.urlPreview = url
       } catch (error) {
         console.error("Error al obtener vista previa:", error)
@@ -684,7 +685,6 @@ export default {
 
     cerrarPreview() {
       if (this.urlPreview) {
-        console.log("Liberando recursos de previsualización:", this.urlPreview)
         URL.revokeObjectURL(this.urlPreview)
       }
       this.documentoPreview = null
@@ -763,6 +763,10 @@ export default {
         if (result) {
           await this.loadFormaciones()
           this.closeFormacionModal()
+          this.notificationStore.success(
+              "La formación ha sido guardada correctamente.",
+              "Formación guardada"
+          )
         }
       } catch (error) {
         console.error("Error al guardar formación:", error)
@@ -800,6 +804,10 @@ export default {
           await this.loadFormaciones()
           this.showDeleteFormacionModal = false
           this.formacionToDelete = null
+          this.notificationStore.success(
+              "La formación ha sido eliminada correctamente.",
+              "Formación eliminada"
+          )
         }
       } catch (error) {
         console.error("Error al eliminar formación:", error)
@@ -827,7 +835,8 @@ export default {
       this.ausenciaForm = {
         id_tipo_ausencia: null,
         fecha_inicio: '',
-        fecha_fin: ''
+        fecha_fin: '',
+        id_empleado: null
       }
       this.ausenciaValidationErrors = {}
     },
@@ -837,7 +846,8 @@ export default {
         id_ausencia: ausencia.id_ausencia,
         id_tipo_ausencia: ausencia.id_tipo_ausencia,
         fecha_inicio: ausencia.fecha_inicio,
-        fecha_fin: ausencia.fecha_fin
+        fecha_fin: ausencia.fecha_fin,
+        id_empleado: this.empleadoId
       }
       this.showAusenciaModal = true
     },
@@ -867,6 +877,10 @@ export default {
         if (result) {
           await this.loadAusencias()
           this.closeAusenciaModal()
+          this.notificationStore.success(
+              "La ausencia ha sido guardada correctamente.",
+              "Ausencia guardada"
+          )
         }
       } catch (error) {
         console.error("Error al guardar ausencia:", error)
@@ -881,6 +895,24 @@ export default {
         }
       } finally {
         this.savingAusencia = false
+      }
+    },
+
+    handleAusenciaValidationError(error) {
+      console.error("Error de validación:", error)
+
+      if (error.type === 'solapamiento') {
+        this.ausenciaValidationErrors = {
+          general: `Error: ${error.message}`
+        }
+      } else if (error.type === 'fecha') {
+        this.ausenciaValidationErrors = {
+          fecha_fin: error.message
+        }
+      } else {
+        this.ausenciaValidationErrors = {
+          general: error.message
+        }
       }
     },
 
@@ -904,6 +936,10 @@ export default {
           await this.loadAusencias()
           this.showDeleteAusenciaModal = false
           this.ausenciaToDelete = null
+          this.notificationStore.success(
+              "La ausencia ha sido eliminada correctamente.",
+              "Ausencia eliminada"
+          )
         }
       } catch (error) {
         console.error("Error al eliminar ausencia:", error)

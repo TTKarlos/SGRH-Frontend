@@ -3,7 +3,7 @@
     <div class="card">
       <div class="card-header">
         <h2>Ausencias</h2>
-        <button v-if="canEdit" @click="$emit('add-ausencia')" class="btn btn-primary">
+        <button v-if="canEdit" @click="openModal()" class="btn btn-primary">
           <Plus size="16" class="btn-icon" />
           Nueva ausencia
         </button>
@@ -56,13 +56,16 @@
                 </span>
               </td>
               <td>{{ formatDate(ausencia.fecha_inicio) }}</td>
-              <td>{{ formatDate(ausencia.fecha_fin) }}</td>
+              <td>
+                <span v-if="ausencia.fecha_fin">{{ formatDate(ausencia.fecha_fin) }}</span>
+                <span v-else class="badge badge-active">En curso</span>
+              </td>
               <td>{{ calcularDuracion(ausencia.fecha_inicio, ausencia.fecha_fin) }}</td>
               <td v-if="canEdit" class="actions-cell">
-                <button @click="$emit('edit-ausencia', ausencia)" class="btn-icon-only" title="Editar">
+                <button @click="editAusencia(ausencia)" class="btn-icon-only" title="Editar">
                   <Edit size="16" />
                 </button>
-                <button @click="$emit('delete-ausencia', ausencia)" class="btn-icon-only text-danger" title="Eliminar">
+                <button @click="deleteAusencia(ausencia)" class="btn-icon-only text-danger" title="Eliminar">
                   <Trash2 size="16" />
                 </button>
               </td>
@@ -72,12 +75,27 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de ausencia -->
+    <AusenciaModal
+        v-if="showModal"
+        :value="currentAusencia"
+        :loading="savingAusencia"
+        :validation-errors="validationErrors"
+        :id_empleado="id_empleado"
+        :tiposAusencia="tiposAusenciaStore.tiposAusencia"
+        :ausencias-existentes="ausencias"
+        @close="closeModal"
+        @save="saveAusencia"
+        @validation-error="handleValidationError"
+    />
   </div>
 </template>
 
 <script>
 import { useTiposAusenciaStore } from "../../../../stores/tiposAusencia"
 import LoadingSpinner from "../../../common/LoadingSpinner.vue"
+import AusenciaModal from "../modals/AusenciaModal.vue"
 import { AlertTriangle, Plus, Edit, Trash2, Calendar, RefreshCw } from "lucide-vue-next"
 
 export default {
@@ -85,6 +103,7 @@ export default {
 
   components: {
     LoadingSpinner,
+    AusenciaModal,
     AlertTriangle,
     Plus,
     Edit,
@@ -109,20 +128,38 @@ export default {
     canEdit: {
       type: Boolean,
       default: false
+    },
+    id_empleado: {
+      type: [Number, String],
+      required: true
     }
   },
 
-  emits: ['add-ausencia', 'edit-ausencia', 'delete-ausencia', 'reload'],
+  emits: ['add-ausencia', 'edit-ausencia', 'delete-ausencia', 'reload', 'save-ausencia'],
 
   data() {
     return {
       tiposAusenciaStore: useTiposAusenciaStore(),
-      tiposEnProcesoDeCarga: {}
+      tiposEnProcesoDeCarga: {},
+      fechaActual: new Date(),
+      showModal: false,
+      currentAusencia: {},
+      savingAusencia: false,
+      validationErrors: {}
     }
   },
 
   created() {
     this.loadTiposAusencia()
+    this.intervalId = setInterval(() => {
+      this.fechaActual = new Date()
+    }, 60000)
+  },
+
+  beforeUnmount() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId)
+    }
   },
 
   methods: {
@@ -144,7 +181,12 @@ export default {
       this.ausencias.forEach(ausencia => {
         if (!ausencia.id_tipo_ausencia) return
 
-        const idNum = parseInt(ausencia.id_tipo_ausencia)
+        const idNum = typeof ausencia.id_tipo_ausencia === 'string'
+            ? parseInt(ausencia.id_tipo_ausencia, 10)
+            : ausencia.id_tipo_ausencia
+
+        if (isNaN(idNum)) return
+
         const tipoExistente = this.tiposAusenciaStore.getTipoAusenciaById(idNum)
 
         if (!tipoExistente && !this.tiposEnProcesoDeCarga[idNum]) {
@@ -167,7 +209,11 @@ export default {
     getTipoAusenciaNombre(idTipoAusencia) {
       if (!idTipoAusencia) return "Sin especificar"
 
-      const idNum = parseInt(idTipoAusencia)
+      const idNum = typeof idTipoAusencia === 'string'
+          ? parseInt(idTipoAusencia, 10)
+          : idTipoAusencia
+
+      if (isNaN(idNum)) return "ID inválido"
 
       const tipo = this.tiposAusenciaStore.getTipoAusenciaById(idNum)
 
@@ -196,15 +242,90 @@ export default {
     },
 
     calcularDuracion(fechaInicio, fechaFin) {
-      if (!fechaInicio || !fechaFin) return '-'
+      if (!fechaInicio) return '-'
 
       const inicio = new Date(fechaInicio)
-      const fin = new Date(fechaFin)
 
-      const diffTime = Math.abs(fin - inicio)
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
+      const fin = fechaFin ? new Date(fechaFin) : new Date()
+
+      const inicioAjustado = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate())
+      const finAjustado = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate())
+
+      const diffTime = finAjustado - inicioAjustado
+
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
+
+      if (!fechaFin) {
+        return `${diffDays} día${diffDays !== 1 ? 's' : ''} (en curso)`
+      }
 
       return `${diffDays} día${diffDays !== 1 ? 's' : ''}`
+    },
+
+    openModal() {
+      this.currentAusencia = {
+        id_empleado: this.id_empleado,
+        id_tipo_ausencia: "",
+        fecha_inicio: "",
+        fecha_fin: ""
+      }
+      this.validationErrors = {}
+      this.showModal = true
+    },
+
+    editAusencia(ausencia) {
+      this.currentAusencia = {
+        ...ausencia,
+        id_empleado: this.id_empleado
+      }
+      this.validationErrors = {}
+      this.showModal = true
+    },
+
+    deleteAusencia(ausencia) {
+      if (confirm(`¿Está seguro de eliminar esta ausencia?`)) {
+        this.$emit('delete-ausencia', ausencia)
+      }
+    },
+
+    closeModal() {
+      this.showModal = false
+      this.currentAusencia = {}
+      this.validationErrors = {}
+    },
+
+    async saveAusencia(ausencia) {
+      try {
+        this.savingAusencia = true
+        this.validationErrors = {}
+
+        this.$emit('save-ausencia', ausencia)
+
+        this.closeModal()
+      } catch (error) {
+        console.error('Error al guardar ausencia:', error)
+        this.validationErrors = error.validationErrors || { general: 'Error al guardar la ausencia' }
+      } finally {
+        this.savingAusencia = false
+      }
+    },
+
+    handleValidationError(error) {
+      console.error("Error de validación:", error)
+
+      if (error.type === 'solapamiento') {
+        this.validationErrors = {
+          general: `Error: ${error.message}`
+        }
+      } else if (error.type === 'fecha') {
+        this.validationErrors = {
+          fecha_fin: error.message
+        }
+      } else {
+        this.validationErrors = {
+          general: error.message
+        }
+      }
     }
   },
 
@@ -366,5 +487,18 @@ export default {
 
 .text-danger:hover {
   background-color: #fee2e2;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-active {
+  background-color: #dcfce7;
+  color: #166534;
 }
 </style>

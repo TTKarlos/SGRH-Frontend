@@ -96,6 +96,11 @@ export const useDocumentosStore = defineStore("documentos", {
                 if (response.data.success) {
                     this.documentos = response.data.data.documentos;
                     this.pagination = response.data.data.pagination;
+
+                    if (this.documentos.length) {
+                        setTimeout(() => this.verificarYLimpiarDocumentosInaccesibles(), 500);
+                    }
+
                     return this.documentos;
                 } else {
                     throw new Error(response.data.message || "Error al obtener documentos del empleado");
@@ -105,6 +110,187 @@ export const useDocumentosStore = defineStore("documentos", {
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
                 return [];
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async verificarYLimpiarDocumentosInaccesibles() {
+            if (!this.documentos.length) return this.documentos;
+
+            const notificationStore = useNotificationStore();
+
+            try {
+                this.loading = true;
+
+                let documentosInaccesibles = 0;
+
+                const resultados = await Promise.allSettled(
+                    this.documentos.map(async (doc) => {
+                        try {
+                            await documentosApi.preview(doc.id_documento);
+                            return { ...doc, archivoInaccesible: false };
+                        } catch (error) {
+                            const esErrorArchivo =
+                                error.response?.status === 404 ||
+                                error.response?.status === 500 ||
+                                error.message?.includes('no se encuentra') ||
+                                error.message?.includes('not found') ||
+                                error.message?.includes('no existe') ||
+                                error.message?.includes('inaccesible');
+
+                            if (esErrorArchivo) {
+                                documentosInaccesibles++;
+                                return { ...doc, archivoInaccesible: true };
+                            }
+                            return { ...doc, archivoInaccesible: false };
+                        }
+                    })
+                );
+
+                const documentosVerificados = resultados
+                    .filter(resultado => resultado.status === 'fulfilled')
+                    .map(resultado => resultado.value);
+
+                this.documentos = documentosVerificados;
+
+                if (documentosInaccesibles > 0) {
+                    let eliminados = 0;
+
+                    const docsInaccesibles = this.documentos.filter(doc => doc.archivoInaccesible);
+
+                    for (const doc of docsInaccesibles) {
+                        try {
+                            await documentosApi.delete(doc.id_documento);
+                            eliminados++;
+                        } catch (error) {
+                            console.error(`Error al eliminar documento ${doc.id_documento}:`, error);
+                        }
+                    }
+
+                    this.documentos = this.documentos.filter(doc => !doc.archivoInaccesible);
+
+                    notificationStore.success(
+                        `Se han eliminado automáticamente ${eliminados} documento(s) inaccesibles de la base de datos.`,
+                        "Limpieza completada"
+                    );
+                }
+
+                return this.documentos;
+            } catch (error) {
+                console.error("Error al verificar y limpiar documentos inaccesibles:", error);
+                notificationStore.error(
+                    "Error al verificar y eliminar documentos inaccesibles",
+                    "Error de verificación"
+                );
+                return this.documentos;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async verificarArchivosExistentes() {
+            if (!this.documentos.length) return this.documentos;
+
+            const notificationStore = useNotificationStore();
+            let documentosInaccesibles = 0;
+
+            try {
+                this.loading = true;
+
+                const resultados = await Promise.allSettled(
+                    this.documentos.map(async (doc) => {
+                        try {
+                            await documentosApi.preview(doc.id_documento);
+                            return { ...doc, archivoInaccesible: false };
+                        } catch (error) {
+                            const esErrorArchivo =
+                                error.response?.status === 404 ||
+                                error.response?.status === 500 ||
+                                error.message?.includes('no se encuentra') ||
+                                error.message?.includes('not found') ||
+                                error.message?.includes('no existe') ||
+                                error.message?.includes('inaccesible');
+
+                            if (esErrorArchivo) {
+                                documentosInaccesibles++;
+                                return { ...doc, archivoInaccesible: true };
+                            }
+                            return { ...doc, archivoInaccesible: false };
+                        }
+                    })
+                );
+
+                const documentosVerificados = resultados
+                    .filter(resultado => resultado.status === 'fulfilled')
+                    .map(resultado => resultado.value);
+
+                this.documentos = documentosVerificados;
+
+                if (documentosInaccesibles > 0) {
+                    notificationStore.warning(
+                        `Se encontraron ${documentosInaccesibles} documento(s) cuyos archivos no están accesibles.`,
+                        "Verificación completada"
+                    );
+                } else {
+                    notificationStore.success(
+                        "Todos los documentos están accesibles.",
+                        "Verificación completada"
+                    );
+                }
+
+                return this.documentos;
+            } catch (error) {
+                console.error("Error al verificar archivos:", error);
+                notificationStore.error(
+                    "Error al verificar la existencia de archivos",
+                    "Error de verificación"
+                );
+                return this.documentos;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async limpiarDocumentosInaccesibles() {
+            if (!this.documentos.length) return this.documentos;
+
+            const notificationStore = useNotificationStore();
+            const documentosInaccesibles = this.documentos.filter(doc => doc.archivoInaccesible);
+
+            if (documentosInaccesibles.length === 0) {
+                notificationStore.info("No hay documentos inaccesibles para eliminar", "Información");
+                return this.documentos;
+            }
+
+            try {
+                this.loading = true;
+                let eliminados = 0;
+
+                for (const doc of documentosInaccesibles) {
+                    try {
+                        await documentosApi.delete(doc.id_documento);
+                        eliminados++;
+                    } catch (error) {
+                        console.error(`Error al eliminar documento ${doc.id_documento}:`, error);
+                    }
+                }
+
+                this.documentos = this.documentos.filter(doc => !doc.archivoInaccesible);
+
+                notificationStore.success(
+                    `Se han eliminado ${eliminados} documento(s) inaccesibles de la base de datos.`,
+                    "Limpieza completada"
+                );
+
+                return this.documentos;
+            } catch (error) {
+                console.error("Error al limpiar documentos inaccesibles:", error);
+                notificationStore.error(
+                    "Error al eliminar documentos inaccesibles",
+                    "Error de limpieza"
+                );
+                return this.documentos;
             } finally {
                 this.loading = false;
             }
@@ -178,7 +364,11 @@ export const useDocumentosStore = defineStore("documentos", {
 
                     const index = this.documentos.findIndex(d => d.id_documento === id);
                     if (index !== -1) {
-                        this.documentos[index] = response.data.data.documento;
+                        const archivoInaccesible = this.documentos[index].archivoInaccesible;
+                        this.documentos[index] = {
+                            ...response.data.data.documento,
+                            archivoInaccesible: archivoInaccesible
+                        };
                     }
 
                     return response.data.data.documento;
@@ -231,7 +421,10 @@ export const useDocumentosStore = defineStore("documentos", {
 
                     const index = this.documentos.findIndex(d => d.id_documento === id);
                     if (index !== -1) {
-                        this.documentos[index] = response.data.data.documento;
+                        this.documentos[index] = {
+                            ...response.data.data.documento,
+                            archivoInaccesible: false
+                        };
                     }
 
                     return response.data.data.documento;
@@ -288,15 +481,44 @@ export const useDocumentosStore = defineStore("documentos", {
 
                 const response = await documentosApi.download(id);
 
-                const contentType = response.headers['content-type'] || 'application/octet-stream';
+                if (!response.data || response.data.length === 0) {
+                    throw new Error("El archivo no está disponible o está dañado");
+                }
 
+                const contentType = response.headers['content-type'] || 'application/octet-stream';
                 const filename = this._determinarNombreArchivo(documento, response.headers, contentType);
 
                 await this._ejecutarDescarga(response.data, contentType, filename);
 
+                const docIndex = this.documentos.findIndex(d => d.id_documento === id);
+                if (docIndex !== -1 && this.documentos[docIndex].archivoInaccesible) {
+                    this.documentos[docIndex].archivoInaccesible = false;
+                }
+
                 return true;
             } catch (error) {
-                const errorMsg = error.response?.data?.message || error.message || "Error al descargar documento";
+                let errorMsg = "Error al descargar documento";
+
+                if (error.response?.status === 404) {
+                    errorMsg = "El archivo físico no se encuentra en el servidor";
+
+                    const docIndex = this.documentos.findIndex(d => d.id_documento === id);
+                    if (docIndex !== -1) {
+                        this.documentos[docIndex].archivoInaccesible = true;
+                    }
+                } else if (error.response?.status === 500) {
+                    errorMsg = "Error del servidor al acceder al archivo";
+                } else if (error.message?.includes("no está disponible")) {
+                    errorMsg = error.message;
+
+                    const docIndex = this.documentos.findIndex(d => d.id_documento === id);
+                    if (docIndex !== -1) {
+                        this.documentos[docIndex].archivoInaccesible = true;
+                    }
+                } else {
+                    errorMsg = error.response?.data?.message || error.message || errorMsg;
+                }
+
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
                 throw error;
@@ -405,6 +627,7 @@ export const useDocumentosStore = defineStore("documentos", {
                 }, 150);
             });
         },
+
         async previewDocumento(id) {
             this.error = null;
             const notificationStore = useNotificationStore();
@@ -412,11 +635,41 @@ export const useDocumentosStore = defineStore("documentos", {
             try {
                 const response = await documentosApi.preview(id);
 
+                if (!response.data || response.data.length === 0) {
+                    throw new Error("El archivo no está disponible o está dañado");
+                }
+
                 const url = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] }));
+
+                const docIndex = this.documentos.findIndex(d => d.id_documento === id);
+                if (docIndex !== -1 && this.documentos[docIndex].archivoInaccesible) {
+                    this.documentos[docIndex].archivoInaccesible = false;
+                }
 
                 return url;
             } catch (error) {
-                const errorMsg = error.response?.data?.message || error.message || "Error al previsualizar documento";
+                let errorMsg = "Error al previsualizar documento";
+
+                if (error.response?.status === 404) {
+                    errorMsg = "El archivo físico no se encuentra en el servidor";
+
+                    const docIndex = this.documentos.findIndex(d => d.id_documento === id);
+                    if (docIndex !== -1) {
+                        this.documentos[docIndex].archivoInaccesible = true;
+                    }
+                } else if (error.response?.status === 500) {
+                    errorMsg = "Error del servidor al acceder al archivo";
+                } else if (error.message?.includes("no está disponible")) {
+                    errorMsg = error.message;
+
+                    const docIndex = this.documentos.findIndex(d => d.id_documento === id);
+                    if (docIndex !== -1) {
+                        this.documentos[docIndex].archivoInaccesible = true;
+                    }
+                } else {
+                    errorMsg = error.response?.data?.message || error.message || errorMsg;
+                }
+
                 this.error = errorMsg;
                 notificationStore.error(errorMsg);
                 throw error;

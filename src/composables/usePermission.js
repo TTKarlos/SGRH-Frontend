@@ -4,10 +4,17 @@ export function usePermission() {
     const authStore = useAuthStore()
 
     /**
+     * Verifica si el usuario tiene el permiso Master
+     */
+    const isMaster = () => {
+        return authStore.hasPermission({ nombre: 'Master', tipo: 'Escritura' });
+    }
+
+    /**
      * Verifica si el usuario tiene un permiso específico
      */
     const hasPermission = (permiso) => {
-        if (authStore.isAdmin) {
+        if (authStore.isAdmin || isMaster()) {
             return true
         }
 
@@ -43,6 +50,7 @@ export function usePermission() {
     return {
         hasPermission,
         canWrite,
-        canRead
+        canRead,
+        isMaster
     }
 }

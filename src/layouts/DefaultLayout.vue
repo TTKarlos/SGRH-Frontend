@@ -48,10 +48,13 @@
               <Users class="nav-icon" size="18" />
               <span class="nav-text">Empleados</span>
             </router-link>
+          </div>
 
-            <!-- Nuevo apartado de Documentos -->
+          <div class="nav-section" v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})">
+            <span class="nav-section-title">Administración</span>
+
             <router-link
-                v-if="hasPermission({nombre: 'Documentos', tipo: 'Lectura'})"
+                v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})"
                 to="/documentos"
                 class="nav-item"
                 @click="closeSidebarOnMobile"
@@ -59,9 +62,28 @@
               <FileText class="nav-icon" size="18" />
               <span class="nav-text">Documentos</span>
             </router-link>
+
+            <router-link
+                v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})"
+                to="/centros"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <Building2 class="nav-icon" size="18" />
+              <span class="nav-text">Centros</span>
+            </router-link>
+
+            <router-link
+                v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})"
+                to="/zonas"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <MapPin class="nav-icon" size="18" />
+              <span class="nav-text">Zonas</span>
+            </router-link>
           </div>
 
-          <!-- Título de categoría condicionado por permisos -->
           <div class="nav-section" v-if="hasPermission({nombre: 'Usuarios', tipo: 'Lectura'}) ||
                                       hasPermission({nombre: 'Usuarios', tipo: 'Escritura'})">
             <span class="nav-section-title">Sistema</span>
@@ -108,8 +130,6 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import LoadingSpinner from '../components/common/LoadingSpinner.vue';
 import {
@@ -121,7 +141,9 @@ import {
   Menu,
   X,
   Search,
-  FileText
+  FileText,
+  Building2,
+  MapPin
 } from 'lucide-vue-next';
 
 export default {
@@ -136,15 +158,20 @@ export default {
     Menu,
     X,
     Search,
-    FileText
+    FileText,
+    Building2,
+    MapPin
   },
-  setup() {
-    const authStore = useAuthStore();
-    const route = useRoute();
-    const router = useRouter();
-    const sidebarOpen = ref(false);
-
-    const currentRouteName = computed(() => {
+  data() {
+    return {
+      sidebarOpen: false
+    };
+  },
+  computed: {
+    authStore() {
+      return useAuthStore();
+    },
+    currentRouteName() {
       const routeNames = {
         dashboard: 'Dashboard',
         empleados: 'Empleados',
@@ -155,77 +182,18 @@ export default {
         'usuario-detalle': 'Detalle de Usuario',
         roles: 'Roles',
         documentos: 'Documentos',
+        centros: 'Centros',
+        departamentos: 'Departamentos',
+        zonas: 'Zonas',
         unauthorized: 'Acceso Denegado',
         'not-found': 'Página No Encontrada'
       };
 
-      return routeNames[route.name] || 'Dashboard';
-    });
-
-    const toggleSidebar = () => {
-      sidebarOpen.value = !sidebarOpen.value;
-    };
-
-    const closeSidebar = () => {
-      sidebarOpen.value = false;
-    };
-
-    const closeSidebarOnMobile = () => {
-      if (window.innerWidth < 1024) {
-        closeSidebar();
-      }
-    };
-
-    const logout = () => {
-      authStore.logout();
-      router.push('/login');
-    };
-
-    const hasPermission = (permission) => {
-      if (authStore.isAdmin) {
-        return true;
-      }
-
-      if (permission.tipo === 'Escritura') {
-        return authStore.hasPermission(permission);
-      } else if (permission.tipo === 'Lectura') {
-        return (
-            authStore.hasPermission(permission) ||
-            authStore.hasPermission({ ...permission, tipo: 'Escritura' })
-        );
-      }
-
-      return false;
-    };
-
-    onMounted(async () => {
-      if (authStore.isAuthenticated &&
-          (!authStore.user?.Rol || !authStore.user?.Rol?.Permisos) &&
-          !authStore.isLoadingPermissions) {
-        try {
-          await authStore.loadUserRoleAndPermissions();
-        } catch (error) {
-          authStore.permissionsLoaded = true;
-        }
-      }
-    });
-
-    return {
-      authStore,
-      sidebarOpen,
-      currentRouteName,
-      toggleSidebar,
-      closeSidebar,
-      closeSidebarOnMobile,
-      hasPermission,
-      logout
-    };
-  },
-  computed: {
+      return routeNames[this.$route.name] || 'Dashboard';
+    },
     userName() {
       return this.authStore.user && this.authStore.user.nombre ? this.authStore.user.nombre : '';
     },
-
     userInitials() {
       if (!this.authStore.user) return '';
 
@@ -239,14 +207,57 @@ export default {
 
       return (inicialNombre + inicialApellido).toUpperCase();
     },
-
     userRole() {
       if (!this.authStore.user || !this.authStore.user.Rol) return '';
 
       return this.authStore.user.Rol.nombre || '';
     }
+  },
+  methods: {
+    toggleSidebar() {
+      this.sidebarOpen = !this.sidebarOpen;
+    },
+    closeSidebar() {
+      this.sidebarOpen = false;
+    },
+    closeSidebarOnMobile() {
+      if (window.innerWidth < 1024) {
+        this.closeSidebar();
+      }
+    },
+    logout() {
+      this.authStore.logout();
+      this.$router.push('/login');
+    },
+    hasPermission(permission) {
+      if (this.authStore.isAdmin) {
+        return true;
+      }
+
+      if (permission.tipo === 'Escritura') {
+        return this.authStore.hasPermission(permission);
+      } else if (permission.tipo === 'Lectura') {
+        return (
+            this.authStore.hasPermission(permission) ||
+            this.authStore.hasPermission({ ...permission, tipo: 'Escritura' })
+        );
+      }
+
+      return false;
+    }
+  },
+  mounted() {
+    if (this.authStore.isAuthenticated &&
+        (!this.authStore.user?.Rol || !this.authStore.user?.Rol?.Permisos) &&
+        !this.authStore.isLoadingPermissions) {
+      try {
+        this.authStore.loadUserRoleAndPermissions();
+      } catch (error) {
+        this.authStore.permissionsLoaded = true;
+      }
+    }
   }
-}
+};
 </script>
 
 <style>

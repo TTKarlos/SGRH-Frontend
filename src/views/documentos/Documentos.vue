@@ -83,7 +83,7 @@
           :url-preview="urlPreview"
           :es-visualizable-p-d-f="esVisualizablePDF"
           :es-visualizable-imagen="esVisualizableImagen"
-          @cerrar="documentoPreview = null"
+          @cerrar="cerrarPreview"
           @descargar="descargarDocumento"
       />
     </div>
@@ -129,22 +129,6 @@ export default {
     AlertTriangle
   },
 
-  setup() {
-    const documentosStore = useDocumentosStore();
-    const empleadosStore = useEmpleadosStore();
-    const authStore = useAuthStore();
-    const notificationStore = useNotificationStore();
-    const { canWrite } = usePermission();
-
-    return {
-      documentosStore,
-      empleadosStore,
-      authStore,
-      notificationStore,
-      canWrite
-    };
-  },
-
   data() {
     return {
       searchQuery: '',
@@ -161,11 +145,32 @@ export default {
       urlPreview: null,
       archivoSeleccionado: null,
       subiendoDocumento: false,
-      eliminandoDocumento: false
+      eliminandoDocumento: false,
+      autoRefreshInterval: null,
+      verificandoArchivos: false,
+      storeCheckInterval: null,
+      ultimaVerificacion: Date.now(),
+      hayDocumentosSinArchivo: false
     };
   },
 
   computed: {
+    documentosStore() {
+      return useDocumentosStore();
+    },
+
+    empleadosStore() {
+      return useEmpleadosStore();
+    },
+
+    authStore() {
+      return useAuthStore();
+    },
+
+    notificationStore() {
+      return useNotificationStore();
+    },
+
     loading() {
       return this.documentosStore.loading;
     },
@@ -207,18 +212,126 @@ export default {
           this.filters.tipo_documento ||
           this.filters.fecha_desde ||
           this.filters.fecha_hasta;
+    },
+
+    documentosSinArchivo() {
+      return this.documentos.filter(doc => doc.archivoInaccesible);
     }
+  },
+
+  created() {
+    this.setupStoreListeners();
   },
 
   mounted() {
     this.cargarDocumentos();
     this.cargarEmpleados();
+    this.iniciarAutoRefresh();
+
+    document.addEventListener('visibilitychange', this.handleVisibilityChange);
+  },
+
+  beforeUnmount() {
+    this.detenerAutoRefresh();
+
+    if (this.storeCheckInterval) {
+      clearInterval(this.storeCheckInterval);
+    }
+
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+
+    if (this.urlPreview) {
+      URL.revokeObjectURL(this.urlPreview);
+    }
   },
 
   methods: {
+    canWrite(modulo) {
+      const { canWrite } = usePermission();
+      return canWrite(modulo);
+    },
+
+    setupStoreListeners() {
+      const checkStoreChanges = () => {
+        const storeDocumentos = this.documentosStore.documentos;
+
+        if (!storeDocumentos || !this.documentos) return;
+
+        const docsSinArchivo = storeDocumentos.filter(doc => doc.archivoInaccesible);
+
+        if (docsSinArchivo.length > 0) {
+          this.hayDocumentosSinArchivo = true;
+          this.$forceUpdate();
+        } else if (this.hayDocumentosSinArchivo) {
+
+          this.hayDocumentosSinArchivo = false;
+          this.$forceUpdate();
+        }
+      };
+
+      this.storeCheckInterval = setInterval(checkStoreChanges, 2000);
+    },
+
+    async verificarArchivosInaccesibles() {
+      if (this.verificandoArchivos) return;
+
+      if (Date.now() - this.ultimaVerificacion < 10000) return;
+
+      this.verificandoArchivos = true;
+      this.ultimaVerificacion = Date.now();
+
+      try {
+        const resultado = await this.documentosStore.verificarYLimpiarDocumentosInaccesibles();
+
+        if (resultado && resultado.documentosInaccesibles && resultado.documentosInaccesibles.length > 0) {
+          this.hayDocumentosSinArchivo = true;
+          this.$forceUpdate();
+        }
+      } catch (error) {
+        console.error("Error al verificar archivos inaccesibles:", error);
+      } finally {
+        this.verificandoArchivos = false;
+      }
+    },
+
+    iniciarAutoRefresh() {
+      this.detenerAutoRefresh();
+
+      this.autoRefreshInterval = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          this.verificarArchivosInaccesibles();
+        }
+      }, 30000);
+    },
+
+    detenerAutoRefresh() {
+      if (this.autoRefreshInterval) {
+        clearInterval(this.autoRefreshInterval);
+        this.autoRefreshInterval = null;
+      }
+    },
+
+    handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        this.verificarArchivosInaccesibles();
+        this.iniciarAutoRefresh();
+      } else {
+        this.detenerAutoRefresh();
+      }
+    },
+
     async cargarDocumentos() {
       try {
         await this.documentosStore.fetchDocumentos();
+
+        if (this.documentos.length > 0) {
+          const docsSinArchivo = this.documentos.filter(doc => doc.archivoInaccesible);
+          this.hayDocumentosSinArchivo = docsSinArchivo.length > 0;
+
+          if (!this.verificandoArchivos) {
+            setTimeout(() => this.verificarArchivosInaccesibles(), 500);
+          }
+        }
       } catch (err) {
         console.error('Error al cargar documentos:', err);
         this.notificationStore.error('Error al cargar los documentos', 'Error');
@@ -328,23 +441,71 @@ export default {
     },
 
     async previewDocumento(documento) {
+      if (documento.archivoInaccesible) {
+        this.notificationStore.warning('El archivo físico no se encuentra en el servidor', 'Archivo no disponible');
+        return;
+      }
+
       this.documentoPreview = documento;
+      this.urlPreview = null;
 
       try {
         this.urlPreview = await this.documentosStore.previewDocumento(documento.id_documento);
       } catch (err) {
         console.error('Error al previsualizar documento:', err);
-        this.notificationStore.error('Error al previsualizar el documento', 'Error');
+
+        let mensajeError = 'Error al previsualizar el documento';
+
+        if (err.response) {
+          const status = err.response.status;
+          if (status === 404) {
+            mensajeError = 'El archivo físico no se encuentra en el servidor';
+
+            await this.documentosStore.marcarDocumentoComoInaccesible(documento.id_documento);
+            this.hayDocumentosSinArchivo = true;
+            this.$forceUpdate();
+          } else if (status === 403) {
+            mensajeError = 'No tiene permisos para ver este documento';
+          } else {
+            mensajeError = `Error del servidor (${status}): ${err.response.statusText}`;
+          }
+        }
+
+        this.notificationStore.error(mensajeError, 'Error');
         this.urlPreview = null;
       }
     },
 
+    cerrarPreview() {
+      if (this.urlPreview) {
+        URL.revokeObjectURL(this.urlPreview);
+      }
+      this.documentoPreview = null;
+      this.urlPreview = null;
+    },
+
     async descargarDocumento(documento) {
+      if (documento.archivoInaccesible) {
+        this.notificationStore.warning('El archivo físico no se encuentra en el servidor', 'Archivo no disponible');
+        return;
+      }
+
       try {
         await this.documentosStore.downloadDocumento(documento.id_documento);
       } catch (err) {
         console.error('Error al descargar documento:', err);
-        this.notificationStore.error('Error al descargar el documento', 'Error');
+
+        let mensajeError = 'Error al descargar el documento';
+
+        if (err.response?.status === 404 || err.message?.includes("no se encuentra")) {
+          mensajeError = 'El archivo físico no se encuentra en el servidor';
+
+          await this.documentosStore.marcarDocumentoComoInaccesible(documento.id_documento);
+          this.hayDocumentosSinArchivo = true;
+          this.$forceUpdate();
+        }
+
+        this.notificationStore.error(mensajeError, 'Error');
       }
     },
 

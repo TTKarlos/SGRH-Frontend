@@ -8,14 +8,20 @@
         <th>Empleado</th>
         <th>Fecha</th>
         <th>Tamaño</th>
+        <th>Estado</th>
         <th>Acciones</th>
       </tr>
       </thead>
       <tbody>
-      <tr v-for="documento in documentos" :key="documento.id_documento" class="documento-row">
+      <tr
+          v-for="documento in documentos"
+          :key="documento.id_documento"
+          class="documento-row"
+          :class="{'documento-inaccesible': documento.archivoInaccesible}"
+      >
         <td>
           <div class="documento-cell">
-            <div class="documento-icon">
+            <div class="documento-icon" :class="{'documento-icon-inaccesible': documento.archivoInaccesible}">
               <component :is="getIconByType(documento.tipo_documento)" size="20" />
             </div>
             <span class="documento-nombre">{{ documento.nombre_original || documento.nombre }}</span>
@@ -37,11 +43,35 @@
         <td>{{ formatDate(documento.fecha_subida) }}</td>
         <td>{{ formatFileSize(documento.tamano) }}</td>
         <td>
+          <span
+              v-if="documento.archivoInaccesible"
+              class="badge badge-error"
+              title="El archivo físico no se encuentra en el servidor"
+          >
+            <AlertTriangle size="14" class="badge-icon" />
+            Archivo no encontrado
+          </span>
+          <span v-else class="badge badge-success">
+            <CheckCircle size="14" class="badge-icon" />
+            Disponible
+          </span>
+        </td>
+        <td>
           <div class="acciones-cell">
-            <button @click="$emit('preview', documento)" class="btn-icon-only" title="Ver documento">
+            <button
+                @click="$emit('preview', documento)"
+                class="btn-icon-only"
+                title="Ver documento"
+                :disabled="documento.archivoInaccesible"
+            >
               <Eye size="18" />
             </button>
-            <button @click="$emit('download', documento)" class="btn-icon-only" title="Descargar">
+            <button
+                @click="$emit('download', documento)"
+                class="btn-icon-only"
+                title="Descargar"
+                :disabled="documento.archivoInaccesible"
+            >
               <Download size="18" />
             </button>
             <button
@@ -63,7 +93,7 @@
 <script>
 import {
   FileText, FileCheck, FileSpreadsheet, FileImage, File, Shield,
-  Eye, Download, Trash2
+  Eye, Download, Trash2, AlertTriangle, CheckCircle
 } from 'lucide-vue-next';
 
 export default {
@@ -78,7 +108,9 @@ export default {
     Shield,
     Eye,
     Download,
-    Trash2
+    Trash2,
+    AlertTriangle,
+    CheckCircle
   },
 
   props: {
@@ -170,6 +202,14 @@ export default {
   background-color: #fef2f2;
 }
 
+.documento-inaccesible {
+  background-color: #fff5f5;
+}
+
+.documento-inaccesible:hover {
+  background-color: #fee2e2;
+}
+
 .documento-cell {
   display: flex;
   align-items: center;
@@ -187,6 +227,11 @@ export default {
   color: #dc2626;
 }
 
+.documento-icon-inaccesible {
+  background-color: #fee2e2;
+  opacity: 0.7;
+}
+
 .documento-nombre {
   font-weight: 500;
   color: #111827;
@@ -196,16 +241,36 @@ export default {
   max-width: 200px;
 }
 
+.documento-inaccesible .documento-nombre {
+  color: #6b7280;
+}
+
 .badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   padding: 0.25rem 0.5rem;
   border-radius: 9999px;
   font-size: 0.75rem;
   font-weight: 500;
 }
 
+.badge-icon {
+  flex-shrink: 0;
+}
+
 .badge-tipo {
   background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.badge-success {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.badge-error {
+  background-color: #fee2e2;
   color: #dc2626;
 }
 
@@ -245,7 +310,12 @@ export default {
   transition: all 0.2s ease;
 }
 
-.btn-icon-only:hover {
+.btn-icon-only:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-icon-only:not(:disabled):hover {
   background-color: #f3f4f6;
   color: #dc2626;
 }

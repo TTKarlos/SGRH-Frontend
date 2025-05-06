@@ -139,7 +139,7 @@
 <script>
 export default {
   name: 'DatosPersonalesTab',
-  
+
   props: {
     empleado: {
       type: Object,
@@ -154,7 +154,7 @@ export default {
       default: () => ({})
     }
   },
-  
+
   methods: {
     formatDate(dateString) {
       if (!dateString) return "No especificada"

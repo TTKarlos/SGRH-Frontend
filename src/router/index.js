@@ -11,6 +11,9 @@ import EmpleadoNuevo from "../views/empleados/EmpleadoNuevo.vue";
 import EmpleadoDetalle from "../views/empleados/EmpleadoDetalle.vue";
 import Documentos from "../views/documentos/Documentos.vue";
 import RolesGestion from "../views/roles/RolesGestion.vue";
+import CentrosGestion from "../views/centros/CentrosGestion.vue";
+import DepartamentosGestion from "../views/departamentos/DepartamentosGestion.vue";
+import ZonasGestion from "../views/zonas/ZonasGestion.vue";
 import Unauthorized from "../views/errors/Unauthorized.vue";
 import NotFound from "../views/errors/NotFound.vue";
 
@@ -113,6 +116,36 @@ const routes = [
             title: "Gestión de Roles",
             icon: "Shield",
             requiredPermission: { nombre: "Usuarios", tipo: "Escritura" },
+        },
+    },
+    {
+        path: "/centros",
+        name: "centros",
+        component: CentrosGestion,
+        meta: {
+            title: "Centros",
+            icon: "Building2",
+            requiredPermission: { nombre: "Master", tipo: "Escritura" },
+        },
+    },
+    {
+        path: "/centros/:idCentro/departamentos",
+        name: "departamentos",
+        component: DepartamentosGestion,
+        props: true,
+        meta: {
+            title: "Departamentos por Centro",
+            requiredPermission: { nombre: "Master", tipo: "Escritura" },
+        },
+    },
+    {
+        path: '/zonas',
+        name: 'zonas',
+        component: ZonasGestion,
+        meta: {
+            requiresAuth: true,
+            requiredPermission: { nombre: 'Master', tipo: 'Escritura' },
+            title: 'Gestión de Zonas'
         },
     },
     {

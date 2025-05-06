@@ -26,7 +26,7 @@
               Subir documento
             </button>
             <button
-                @click="cargarDocumentos"
+                @click="cargarDocumentos(true)"
                 class="btn btn-icon-only"
                 title="Recargar documentos"
             >
@@ -46,7 +46,7 @@
             <AlertTriangle size="24" />
             <p>{{ error }}</p>
           </div>
-          <button @click="cargarDocumentos" class="btn btn-primary btn-sm">
+          <button @click="cargarDocumentos(true)" class="btn btn-primary btn-sm">
             Reintentar
           </button>
         </div>
@@ -82,6 +82,7 @@
               v-for="documento in documentosFiltrados"
               :key="documento.id_documento"
               class="documento-card"
+              :class="{ 'documento-inaccesible': documento.archivoInaccesible }"
           >
             <div class="documento-icon">
               <component :is="getFileIcon(documento.nombre_original)" size="24" />
@@ -92,12 +93,17 @@
               <p class="documento-fecha">
                 {{ formatDate(documento.fecha_subida) }}
               </p>
+              <div v-if="documento.archivoInaccesible" class="documento-inaccesible-badge">
+                <AlertTriangle size="12" />
+                <span>Archivo no encontrado</span>
+              </div>
             </div>
             <div class="documento-actions">
               <button
                   @click.stop="solicitarPrevisualizacion(documento)"
                   class="btn-action"
                   title="Ver documento"
+                  :disabled="documento.archivoInaccesible"
               >
                 <Eye size="16" />
               </button>
@@ -168,7 +174,6 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { useDocumentosStore } from "@/stores/documentos"
 import { useAuthStore } from "@/stores/auth"
 import { useNotificationStore } from "@/stores/notification"
@@ -226,133 +231,321 @@ export default {
 
   emits: ['previsualizar'],
 
-  setup(props, { emit }) {
-    const documentosStore = useDocumentosStore()
-    const authStore = useAuthStore()
-    const notificationStore = useNotificationStore()
+  data() {
+    return {
+      documentos: [],
+      cargando: false,
+      error: null,
+      autoRefreshInterval: null,
+      lastRefreshTime: Date.now(),
+      autoRefreshEnabled: true,
+      autoRefreshTime: 30000,
+      verificandoArchivos: false,
+      storeCheckInterval: null,
 
-    const documentos = ref([])
-    const cargando = ref(false)
-    const error = ref(null)
+      filtros: {
+        busqueda: '',
+        tipo: '',
+        fechaDesde: '',
+        fechaHasta: ''
+      },
 
-    const filtros = ref({
-      busqueda: '',
-      tipo: '',
-      fechaDesde: '',
-      fechaHasta: ''
-    })
+      documentoPreview: null,
+      urlPreview: null,
+      cargandoPreview: false,
+      errorPreview: null,
+      previewEnProceso: false,
+      previewTimeoutId: null,
 
-    const documentoPreview = ref(null)
-    const urlPreview = ref(null)
-    const cargandoPreview = ref(false)
-    const errorPreview = ref(null)
-    const previewEnProceso = ref(false)
-    const previewTimeoutId = ref(null)
+      mostrarModalSubida: false,
+      mostrarModalEdicion: false,
+      mostrarModalEliminar: false,
 
-    const mostrarModalSubida = ref(false)
-    const mostrarModalEdicion = ref(false)
-    const mostrarModalEliminar = ref(false)
+      documentoEditando: null,
+      documentoEliminar: null,
 
-    const documentoEditando = ref(null)
-    const documentoEliminar = ref(null)
+      archivoSeleccionado: null,
+      subiendoDocumento: false,
+      guardandoDocumento: false,
+      eliminandoDocumento: false,
+      erroresValidacion: {}
+    }
+  },
 
-    const archivoSeleccionado = ref(null)
-    const subiendoDocumento = ref(false)
-    const guardandoDocumento = ref(false)
-    const eliminandoDocumento = ref(false)
-    const erroresValidacion = ref({})
+  computed: {
+    documentosStore() {
+      return useDocumentosStore()
+    },
 
-    const canViewDocuments = computed(() =>
-        authStore.hasPermission({ nombre: "Documentos", tipo: "Lectura" })
-    )
+    authStore() {
+      return useAuthStore()
+    },
 
-    const canEditDocuments = computed(() =>
-        authStore.hasPermission({ nombre: "Documentos", tipo: "Escritura" })
-    )
+    notificationStore() {
+      return useNotificationStore()
+    },
 
-    const documentosFiltrados = computed(() => {
-      if (!documentos.value?.length) return []
+    canViewDocuments() {
+      return this.authStore.hasPermission({ nombre: "Documentos", tipo: "Lectura" })
+    },
 
-      if (!filtros.value.busqueda) return documentos.value
+    canEditDocuments() {
+      return this.authStore.hasPermission({ nombre: "Documentos", tipo: "Escritura" })
+    },
 
-      const busqueda = filtros.value.busqueda.toLowerCase()
-      return documentos.value.filter(doc =>
+    documentosFiltrados() {
+      if (!this.documentos?.length) return []
+
+      if (!this.filtros.busqueda) return this.documentos
+
+      const busqueda = this.filtros.busqueda.toLowerCase()
+      return this.documentos.filter(doc =>
           doc.nombre?.toLowerCase().includes(busqueda) ||
           doc.nombre_original?.toLowerCase().includes(busqueda) ||
           doc.tipo_documento?.toLowerCase().includes(busqueda) ||
           doc.observaciones?.toLowerCase().includes(busqueda)
       )
-    })
+    }
+  },
 
-    const cargarDocumentos = async () => {
-      if (!props.idEmpleado) {
-        error.value = 'No se pudo identificar al empleado'
+  watch: {
+    idEmpleado: {
+      handler(newId) {
+        if (newId && this.canViewDocuments) {
+          localStorage.setItem('currentEmpleadoId', newId)
+          this.cargarDocumentos(true)
+        }
+      }
+    },
+
+    '$route.params.id': {
+      handler(newId) {
+        if (newId && this.canViewDocuments) {
+          localStorage.setItem('currentEmpleadoId', newId)
+          this.cargarDocumentos(true)
+        }
+      }
+    }
+  },
+
+  created() {
+    this.setupStoreListeners()
+  },
+
+  mounted() {
+    document.addEventListener('visibilitychange', this.handleVisibilityChange)
+
+    this.$nextTick(() => {
+      if (this.canViewDocuments) {
+        this.cargarDocumentos(true)
+        this.iniciarAutoRefresh()
+      }
+    })
+  },
+
+  beforeUnmount() {
+    if (this.urlPreview) {
+      URL.revokeObjectURL(this.urlPreview)
+    }
+
+    if (this.previewTimeoutId) {
+      clearTimeout(this.previewTimeoutId)
+    }
+
+    this.detenerAutoRefresh()
+
+    if (this.storeCheckInterval) {
+      clearInterval(this.storeCheckInterval)
+    }
+
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+  },
+
+  methods: {
+    setupStoreListeners() {
+      const checkStoreChanges = () => {
+        const storeDocumentos = this.documentosStore.documentos
+
+        if (storeDocumentos.length !== this.documentos.length) {
+          this.documentos = [...storeDocumentos]
+          return
+        }
+
+        let hayDiferencias = false
+        storeDocumentos.forEach(storeDoc => {
+          const localDoc = this.documentos.find(d => d.id_documento === storeDoc.id_documento)
+
+          if (!localDoc ||
+              localDoc.archivoInaccesible !== storeDoc.archivoInaccesible ||
+              localDoc.nombre !== storeDoc.nombre ||
+              localDoc.tipo_documento !== storeDoc.tipo_documento) {
+            hayDiferencias = true
+          }
+        })
+
+        if (hayDiferencias) {
+          this.documentos = [...storeDocumentos]
+        }
+      }
+
+      this.storeCheckInterval = setInterval(checkStoreChanges, 2000)
+    },
+
+    obtenerIdEmpleadoDesdeURL() {
+      if (this.idEmpleado) return this.idEmpleado
+
+      const idFromRoute = this.$route.params.id || this.$route.query.id || localStorage.getItem('currentEmpleadoId')
+
+      if (idFromRoute) {
+        localStorage.setItem('currentEmpleadoId', idFromRoute)
+        return idFromRoute
+      }
+
+      return null
+    },
+
+    async verificarArchivosInaccesibles() {
+      if (this.verificandoArchivos) return
+
+      this.verificandoArchivos = true
+      try {
+        const idEmpleado = this.obtenerIdEmpleadoDesdeURL()
+        if (!idEmpleado) return
+
+        await this.documentosStore.verificarYLimpiarDocumentosInaccesibles()
+
+        this.documentos = [...this.documentosStore.documentos]
+      } catch (error) {
+        console.error("Error al verificar archivos inaccesibles:", error)
+      } finally {
+        this.verificandoArchivos = false
+      }
+    },
+
+    async cargarDocumentos(forzarRecarga = false) {
+      const idEmpleado = this.obtenerIdEmpleadoDesdeURL()
+
+      if (!idEmpleado) {
+        this.error = 'No se pudo identificar al empleado'
         return
       }
 
-      cargando.value = true
-      error.value = null
+      if (!forzarRecarga && Date.now() - this.lastRefreshTime < 5000) {
+        return
+      }
+
+      this.cargando = true
+      this.error = null
 
       try {
-        const response = await documentosStore.fetchDocumentosByEmpleado(props.idEmpleado)
-        documentos.value = response || []
+        const response = await this.documentosStore.fetchDocumentosByEmpleado(idEmpleado)
+        this.documentos = [...(response || [])]
+        this.lastRefreshTime = Date.now()
+
+        if (this.documentos.length > 0 && !this.verificandoArchivos) {
+          setTimeout(() => this.verificarArchivosInaccesibles(), 500)
+        }
       } catch (err) {
-        error.value = err.message || 'Error al cargar los documentos'
-        notificationStore.error(error.value, 'Error')
+        this.error = err.message || 'Error al cargar los documentos'
+        this.notificationStore.error(this.error, 'Error')
       } finally {
-        cargando.value = false
+        this.cargando = false
       }
-    }
+    },
 
-    const actualizarFiltros = () => {}
 
-    const limpiarFiltros = () => {
-      filtros.value = {
+    iniciarAutoRefresh() {
+      this.detenerAutoRefresh()
+
+      if (this.autoRefreshEnabled) {
+        this.autoRefreshInterval = setInterval(() => {
+          if (document.visibilityState === 'visible') {
+            this.cargarDocumentos()
+          }
+        }, this.autoRefreshTime)
+      }
+    },
+
+    detenerAutoRefresh() {
+      if (this.autoRefreshInterval) {
+        clearInterval(this.autoRefreshInterval)
+        this.autoRefreshInterval = null
+      }
+    },
+
+    handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        this.cargarDocumentos(true)
+        this.iniciarAutoRefresh()
+      } else {
+        this.detenerAutoRefresh()
+      }
+    },
+
+    actualizarFiltros() {
+    },
+
+    limpiarFiltros() {
+      this.filtros = {
         busqueda: '',
         tipo: '',
         fechaDesde: '',
         fechaHasta: ''
       }
-    }
+    },
 
-    const solicitarPrevisualizacion = (documento) => {
-      if (!documento) return
+    solicitarPrevisualizacion(documento) {
+      if (!documento || documento.archivoInaccesible) return
 
-      if (props.manejoPreview) {
-        previsualizarDocumento(documento)
+      if (this.manejoPreview) {
+        this.previsualizarDocumento(documento)
       } else {
-        emit('previsualizar', documento)
+        this.$emit('previsualizar', documento)
       }
-    }
+    },
 
-    const previsualizarDocumento = async (documento) => {
-      if (!documento) return
+    async previsualizarDocumento(documento) {
+      if (!documento || documento.archivoInaccesible) return
 
-      if (documentoPreview.value?.id_documento === documento.id_documento) return
+      if (this.documentoPreview?.id_documento === documento.id_documento) return
 
-      if (previewEnProceso.value) return
+      if (this.previewEnProceso) return
 
-      previewEnProceso.value = true
-      documentoPreview.value = documento
-      cargandoPreview.value = true
-      errorPreview.value = null
-      urlPreview.value = null
+      this.previewEnProceso = true
+      this.documentoPreview = documento
+      this.cargandoPreview = true
+      this.errorPreview = null
+      this.urlPreview = null
 
       try {
-        const url = await documentosStore.previewDocumento(documento.id_documento)
+        const url = await this.documentosStore.previewDocumento(documento.id_documento)
 
         if (!url) {
           throw new Error('No se pudo generar la URL de previsualización')
         }
 
-        urlPreview.value = url
+        this.urlPreview = url
+
+        if (documento.archivoInaccesible) {
+          const docIndex = this.documentos.findIndex(doc => doc.id_documento === documento.id_documento)
+          if (docIndex !== -1) {
+            this.documentos[docIndex].archivoInaccesible = false
+            this.documentos = [...this.documentos]
+          }
+        }
       } catch (err) {
         let mensajeError = err.message || 'No se pudo cargar la vista previa del documento'
 
         if (err.response) {
           const status = err.response.status
           if (status === 404) {
-            mensajeError = 'El documento solicitado no existe o no está disponible'
+            mensajeError = 'El archivo físico no se encuentra en el servidor'
+
+            const docIndex = this.documentos.findIndex(doc => doc.id_documento === documento.id_documento)
+            if (docIndex !== -1) {
+              this.documentos[docIndex].archivoInaccesible = true
+              this.documentos = [...this.documentos]
+            }
           } else if (status === 403) {
             mensajeError = 'No tiene permisos para ver este documento'
           } else {
@@ -360,58 +553,74 @@ export default {
           }
         }
 
-        errorPreview.value = mensajeError
-        notificationStore.warning(errorPreview.value, 'Error de previsualización')
+        this.errorPreview = mensajeError
+        this.notificationStore.warning(this.errorPreview, 'Error de previsualización')
       } finally {
-        cargandoPreview.value = false
+        this.cargandoPreview = false
 
-        previewTimeoutId.value = setTimeout(() => {
-          previewEnProceso.value = false
+        this.previewTimeoutId = setTimeout(() => {
+          this.previewEnProceso = false
         }, 300)
       }
-    }
+    },
 
-    const cerrarPreview = () => {
-      if (urlPreview.value) {
-        URL.revokeObjectURL(urlPreview.value)
+    cerrarPreview() {
+      if (this.urlPreview) {
+        URL.revokeObjectURL(this.urlPreview)
       }
-      documentoPreview.value = null
-      urlPreview.value = null
-      errorPreview.value = null
-      previewEnProceso.value = false
+      this.documentoPreview = null
+      this.urlPreview = null
+      this.errorPreview = null
+      this.previewEnProceso = false
 
-      if (previewTimeoutId.value) {
-        clearTimeout(previewTimeoutId.value)
-        previewTimeoutId.value = null
+      if (this.previewTimeoutId) {
+        clearTimeout(this.previewTimeoutId)
+        this.previewTimeoutId = null
       }
-    }
+    },
 
-    const descargarDocumento = async (documento) => {
-      if (!documento) return
+    async descargarDocumento(documento) {
+      if (!documento || documento.archivoInaccesible) return
 
       try {
-        await documentosStore.downloadDocumento(documento.id_documento)
+        await this.documentosStore.downloadDocumento(documento.id_documento)
+
+        if (documento.archivoInaccesible) {
+          const docIndex = this.documentos.findIndex(doc => doc.id_documento === documento.id_documento)
+          if (docIndex !== -1) {
+            this.documentos[docIndex].archivoInaccesible = false
+            this.documentos = [...this.documentos]
+          }
+        }
       } catch (err) {
-        notificationStore.error(
+        if (err.response?.status === 404 || err.message?.includes("no se encuentra")) {
+          const docIndex = this.documentos.findIndex(doc => doc.id_documento === documento.id_documento)
+          if (docIndex !== -1) {
+            this.documentos[docIndex].archivoInaccesible = true
+            this.documentos = [...this.documentos]
+          }
+        }
+
+        this.notificationStore.error(
             err.message || 'Ha ocurrido un error al descargar el documento',
             'Error al descargar'
         )
       }
-    }
+    },
 
-    const manejarSeleccionArchivo = (archivo) => {
-      archivoSeleccionado.value = archivo
-    }
+    manejarSeleccionArchivo(archivo) {
+      this.archivoSeleccionado = archivo
+    },
 
-    const manejarSoltarArchivo = (archivo) => {
-      archivoSeleccionado.value = archivo
-    }
+    manejarSoltarArchivo(archivo) {
+      this.archivoSeleccionado = archivo
+    },
 
-    const eliminarArchivoSeleccionado = () => {
-      archivoSeleccionado.value = null
-    }
+    eliminarArchivoSeleccionado() {
+      this.archivoSeleccionado = null
+    },
 
-    const validarDocumento = (documento, requiereArchivo = true) => {
+    validarDocumento(documento, requiereArchivo = true) {
       const errores = {}
 
       if (!documento.nombre?.trim()) {
@@ -422,127 +631,130 @@ export default {
         errores.tipo = "Debe seleccionar un tipo de documento"
       }
 
-      if (requiereArchivo && !archivoSeleccionado.value) {
+      if (requiereArchivo && !this.archivoSeleccionado) {
         errores.archivo = "Debe seleccionar un archivo"
       }
 
-      erroresValidacion.value = errores
+      this.erroresValidacion = errores
       return Object.keys(errores).length === 0
-    }
+    },
 
-    const subirDocumento = async (nuevoDoc) => {
-      if (!canEditDocuments.value) {
-        notificationStore.error('No tiene permisos para subir documentos', 'Error de permisos')
+    async subirDocumento(nuevoDoc) {
+      if (!this.canEditDocuments) {
+        this.notificationStore.error('No tiene permisos para subir documentos', 'Error de permisos')
         return
       }
 
-      if (!props.idEmpleado) {
-        notificationStore.error('No se pudo identificar al empleado', 'Error')
+      const idEmpleado = this.obtenerIdEmpleadoDesdeURL()
+      if (!idEmpleado) {
+        this.notificationStore.error('No se pudo identificar al empleado', 'Error')
         return
       }
 
-      if (!validarDocumento(nuevoDoc)) {
+      if (!this.validarDocumento(nuevoDoc)) {
         return
       }
 
       try {
-        subiendoDocumento.value = true
+        this.subiendoDocumento = true
 
         const formData = new FormData()
 
-        formData.append("id_empleado", String(props.idEmpleado))
+        formData.append("id_empleado", String(idEmpleado))
 
-        formData.append("archivo", archivoSeleccionado.value)
+        formData.append("archivo", this.archivoSeleccionado)
         formData.append("nombre", nuevoDoc.nombre)
         formData.append("tipo_documento", nuevoDoc.tipo_documento)
         formData.append("observaciones", nuevoDoc.observaciones || "")
 
-        await documentosStore.uploadDocumento(formData)
-        await cargarDocumentos()
+        await this.documentosStore.uploadDocumento(formData)
+        await this.cargarDocumentos(true)
 
-        notificationStore.success("El documento ha sido subido correctamente", "Documento subido")
-        cerrarModalSubida()
+        this.notificationStore.success("El documento ha sido subido correctamente", "Documento subido")
+        this.cerrarModalSubida()
       } catch (error) {
         if (error.response?.data?.errors) {
-          erroresValidacion.value = error.response.data.errors
+          this.erroresValidacion = error.response.data.errors
         }
 
-        notificationStore.error(
+        this.notificationStore.error(
             error.response?.data?.message || error.message || "Ha ocurrido un error al subir el documento",
             "Error al subir"
         )
       } finally {
-        subiendoDocumento.value = false
+        this.subiendoDocumento = false
       }
-    }
+    },
 
-    const cerrarModalSubida = () => {
-      mostrarModalSubida.value = false
-      archivoSeleccionado.value = null
-      erroresValidacion.value = {}
-    }
+    cerrarModalSubida() {
+      this.mostrarModalSubida = false
+      this.archivoSeleccionado = null
+      this.erroresValidacion = {}
+    },
 
-    const editarDocumento = (documento) => {
-      if (!canEditDocuments.value) {
-        notificationStore.error('No tiene permisos para editar documentos', 'Error de permisos')
+    editarDocumento(documento) {
+      if (!this.canEditDocuments) {
+        this.notificationStore.error('No tiene permisos para editar documentos', 'Error de permisos')
         return
       }
 
-      documentoEditando.value = { ...documento }
-      mostrarModalEdicion.value = true
-      erroresValidacion.value = {}
-    }
+      this.documentoEditando = { ...documento }
+      this.mostrarModalEdicion = true
+      this.erroresValidacion = {}
+    },
 
-    const actualizarDocumento = async (documentoActualizado) => {
-      if (!canEditDocuments.value) {
-        notificationStore.error('No tiene permisos para editar documentos', 'Error de permisos')
+    async actualizarDocumento(documentoActualizado) {
+      if (!this.canEditDocuments) {
+        this.notificationStore.error('No tiene permisos para editar documentos', 'Error de permisos')
         return
       }
 
-      if (!validarDocumento(documentoActualizado, false)) {
+      if (!this.validarDocumento(documentoActualizado, false)) {
         return
       }
 
       try {
-        guardandoDocumento.value = true
+        this.guardandoDocumento = true
 
+        const idEmpleado = this.obtenerIdEmpleadoDesdeURL()
         const docToUpdate = {
           ...documentoActualizado,
-          id_empleado: props.idEmpleado
+          id_empleado: idEmpleado
         }
 
-        await documentosStore.updateDocumento(docToUpdate.id_documento, docToUpdate)
-        await cargarDocumentos()
+        await this.documentosStore.updateDocumento(docToUpdate.id_documento, docToUpdate)
+        await this.cargarDocumentos(true)
 
-        notificationStore.success("El documento ha sido actualizado correctamente", "Documento actualizado")
-        mostrarModalEdicion.value = false
+        this.notificationStore.success("El documento ha sido actualizado correctamente", "Documento actualizado")
+        this.mostrarModalEdicion = false
       } catch (error) {
-        notificationStore.error(
+        this.notificationStore.error(
             error.response?.data?.message || error.message || "Ha ocurrido un error al actualizar el documento",
             "Error al actualizar"
         )
       } finally {
-        guardandoDocumento.value = false
+        this.guardandoDocumento = false
       }
-    }
+    },
 
-    const actualizarDocumentoConArchivo = async (formData, idDocumento) => {
-      if (!canEditDocuments.value) {
-        notificationStore.error('No tiene permisos para editar documentos', 'Error de permisos')
+    async actualizarDocumentoConArchivo(formData, idDocumento) {
+      if (!this.canEditDocuments) {
+        this.notificationStore.error('No tiene permisos para editar documentos', 'Error de permisos')
         return
       }
 
-      if (!props.idEmpleado) {
-        notificationStore.error('No se pudo identificar al empleado', 'Error')
+      const idEmpleado = this.obtenerIdEmpleadoDesdeURL()
+      if (!idEmpleado) {
+        this.notificationStore.error('No se pudo identificar al empleado', 'Error')
         return
       }
 
       try {
-        guardandoDocumento.value = true
+        this.guardandoDocumento = true
 
         const nuevoFormData = new FormData()
 
-        nuevoFormData.append('id_empleado', String(props.idEmpleado))
+        nuevoFormData.append('id_empleado', String(idEmpleado))
 
         for (const [key, value] of formData.entries()) {
           if (key !== 'id_empleado') {
@@ -550,57 +762,62 @@ export default {
           }
         }
 
-        await documentosStore.updateDocumentoWithFile(idDocumento, nuevoFormData)
-        await cargarDocumentos()
+        await this.documentosStore.updateDocumentoWithFile(idDocumento, nuevoFormData)
+        await this.cargarDocumentos(true)
 
-        notificationStore.success("El documento ha sido actualizado correctamente", "Documento actualizado")
-        mostrarModalEdicion.value = false
+        this.notificationStore.success("El documento ha sido actualizado correctamente", "Documento actualizado")
+        this.mostrarModalEdicion = false
       } catch (error) {
-        notificationStore.error(
+        this.notificationStore.error(
             error.response?.data?.message || error.message || "Ha ocurrido un error al actualizar el documento",
             "Error al actualizar"
         )
       } finally {
-        guardandoDocumento.value = false
+        this.guardandoDocumento = false
       }
-    }
+    },
 
-    const confirmarEliminar = (documento) => {
-      if (!canEditDocuments.value) {
-        notificationStore.error('No tiene permisos para eliminar documentos', 'Error de permisos')
+    confirmarEliminar(documento) {
+      if (!this.canEditDocuments) {
+        this.notificationStore.error('No tiene permisos para eliminar documentos', 'Error de permisos')
         return
       }
 
-      documentoEliminar.value = documento
-      mostrarModalEliminar.value = true
-    }
+      this.documentoEliminar = documento
+      this.mostrarModalEliminar = true
+    },
 
-    const eliminarDocumento = async () => {
-      if (!canEditDocuments.value || !documentoEliminar.value) {
-        notificationStore.error('No tiene permisos para eliminar documentos', 'Error de permisos')
+    async eliminarDocumento() {
+      if (!this.canEditDocuments || !this.documentoEliminar) {
+        this.notificationStore.error('No tiene permisos para eliminar documentos', 'Error de permisos')
         return
       }
 
       try {
-        eliminandoDocumento.value = true
+        this.eliminandoDocumento = true
 
-        await documentosStore.deleteDocumento(documentoEliminar.value.id_documento)
-        await cargarDocumentos()
+        await this.documentosStore.deleteDocumento(this.documentoEliminar.id_documento)
 
-        notificationStore.success("El documento ha sido eliminado correctamente", "Documento eliminado")
-        mostrarModalEliminar.value = false
-        documentoEliminar.value = null
+        this.documentos = this.documentos.filter(doc =>
+            doc.id_documento !== this.documentoEliminar.id_documento
+        )
+
+        await this.cargarDocumentos(true)
+
+        this.notificationStore.success("El documento ha sido eliminado correctamente", "Documento eliminado")
+        this.mostrarModalEliminar = false
+        this.documentoEliminar = null
       } catch (error) {
-        notificationStore.error(
+        this.notificationStore.error(
             error.response?.data?.message || error.message || "Ha ocurrido un error al eliminar el documento",
             "Error al eliminar"
         )
       } finally {
-        eliminandoDocumento.value = false
+        this.eliminandoDocumento = false
       }
-    }
+    },
 
-    const formatDate = (dateString) => {
+    formatDate(dateString) {
       if (!dateString) return '-'
 
       const date = new Date(dateString)
@@ -609,9 +826,9 @@ export default {
         month: '2-digit',
         year: 'numeric'
       })
-    }
+    },
 
-    const getFileIcon = (fileName) => {
+    getFileIcon(fileName) {
       if (!fileName) return File
 
       fileName = fileName.toLowerCase()
@@ -629,75 +846,6 @@ export default {
       }
 
       return File
-    }
-
-    onMounted(() => {
-      if (canViewDocuments.value && props.idEmpleado) {
-        cargarDocumentos()
-      }
-    })
-
-    watch(() => props.idEmpleado, (newId) => {
-      if (newId && canViewDocuments.value) {
-        cargarDocumentos()
-      }
-    })
-
-    onBeforeUnmount(() => {
-      if (urlPreview.value) {
-        URL.revokeObjectURL(urlPreview.value)
-      }
-
-      if (previewTimeoutId.value) {
-        clearTimeout(previewTimeoutId.value)
-      }
-    })
-
-    return {
-      documentos,
-      documentosFiltrados,
-      cargando,
-      error,
-      filtros,
-      documentoPreview,
-      urlPreview,
-      cargandoPreview,
-      errorPreview,
-      previewEnProceso,
-      mostrarModalSubida,
-      mostrarModalEdicion,
-      mostrarModalEliminar,
-      documentoEditando,
-      documentoEliminar,
-      archivoSeleccionado,
-      subiendoDocumento,
-      guardandoDocumento,
-      eliminandoDocumento,
-      erroresValidacion,
-
-      canViewDocuments,
-      canEditDocuments,
-
-      cargarDocumentos,
-      actualizarFiltros,
-      limpiarFiltros,
-      solicitarPrevisualizacion,
-      previsualizarDocumento,
-      cerrarPreview,
-      descargarDocumento,
-      manejarSeleccionArchivo,
-      manejarSoltarArchivo,
-      eliminarArchivoSeleccionado,
-      validarDocumento,
-      subirDocumento,
-      cerrarModalSubida,
-      editarDocumento,
-      actualizarDocumento,
-      actualizarDocumentoConArchivo,
-      confirmarEliminar,
-      eliminarDocumento,
-      formatDate,
-      getFileIcon
     }
   }
 }
@@ -836,6 +984,32 @@ export default {
   transform: translateY(-2px);
 }
 
+.documento-inaccesible {
+  opacity: 0.7;
+  border: 1px solid #fee2e2;
+  background-color: #fff5f5;
+}
+
+.documento-inaccesible .documento-icon {
+  background-color: #fee2e2;
+}
+
+.documento-inaccesible-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #fee2e2;
+  color: #dc2626;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.documento-inaccesible-badge svg {
+  flex-shrink: 0;
+}
+
 .documento-icon {
   display: flex;
   align-items: center;
@@ -893,7 +1067,12 @@ export default {
   margin-left: 0.25rem;
 }
 
-.btn-action:hover {
+.btn-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-action:not(:disabled):hover {
   background-color: #f3f4f6;
   color: #dc2626;
 }
@@ -963,6 +1142,17 @@ export default {
 
 .btn-secondary:hover {
   background-color: #e5e7eb;
+}
+
+.btn-danger {
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.btn-danger:hover {
+  background-color: #fecaca;
+  color: #b91c1c;
 }
 
 @media (max-width: 768px) {

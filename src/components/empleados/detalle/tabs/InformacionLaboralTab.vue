@@ -5,6 +5,11 @@
         <h2>Información Laboral</h2>
       </div>
       <div class="card-body">
+        <div v-if="cargando" class="loading-indicator">
+          <div class="spinner"></div>
+          <p>Cargando datos...</p>
+        </div>
+
         <div class="form-grid">
           <div class="form-group">
             <label>Puesto Actual</label>
@@ -52,6 +57,7 @@
                 v-model="empleado.id_departamento"
                 class="form-control"
                 :class="{ 'is-invalid': validationErrors.id_departamento }"
+                @change="handleDepartamentoChange"
             >
               <option :value="null">Sin departamento</option>
               <option v-for="departamento in departamentosFiltrados"
@@ -89,9 +95,14 @@
 </template>
 
 <script>
+import { ref, computed, watch } from 'vue';
+import { useCentrosStore } from '../../../../stores/centros';
+import { useEmpleadosStore } from '../../../../stores/empleados';
+import empleadosApi from '../../../../api/empleados.api';
+
 export default {
   name: 'InformacionLaboralTab',
-  
+
   props: {
     empleado: {
       type: Object,
@@ -116,38 +127,114 @@ export default {
     selectedCentroId: {
       type: [Number, null],
       default: null
+    },
+    saveTriggered: {
+      type: Boolean,
+      default: false
     }
   },
-  
-  emits: ['centro-change'],
-  
-  computed: {
-    departamentosFiltrados() {
-      if (!this.selectedCentroId) {
-        return this.departamentos
+
+  emits: ['centro-change', 'empleado-actualizado'],
+
+  setup(props, { emit }) {
+    const centrosStore = useCentrosStore();
+    const empleadosStore = useEmpleadosStore();
+    const centroDepartamentos = ref([]);
+    const needsReload = ref(false);
+    const cargando = ref(false);
+
+    const departamentosFiltrados = computed(() => {
+      if (props.selectedCentroId) {
+        const centroSeleccionado = props.centros.find(c => c.id_centro === props.selectedCentroId);
+
+        if (centroSeleccionado && centroSeleccionado.Departamentos && centroSeleccionado.Departamentos.length > 0) {
+          return centroSeleccionado.Departamentos;
+        }
+
+        return props.departamentos.filter(d => d.id_centro === props.selectedCentroId);
       }
 
-      return this.departamentos.filter(
-        departamento => departamento.id_centro === this.selectedCentroId
-      )
-    }
-  },
-  
-  methods: {
-    formatDate(dateString) {
-      if (!dateString) return "No especificada"
+      return props.departamentos;
+    });
 
-      const date = new Date(dateString)
+    const handleCentroChange = () => {
+      emit('centro-change', props.empleado.id_centro);
+      needsReload.value = true;
+    };
+
+    const handleDepartamentoChange = async () => {
+      needsReload.value = true;
+
+      if (props.editMode && props.empleado.id_empleado) {
+        await actualizarDepartamento();
+      }
+    };
+
+    const actualizarDepartamento = async () => {
+      if (!props.empleado.id_empleado) return;
+
+      cargando.value = true;
+
+      try {
+        const datosActualizados = {
+          id_departamento: props.empleado.id_departamento
+        };
+
+        await empleadosApi.update(
+            props.empleado.id_empleado,
+            datosActualizados
+        );
+
+        await recargarEmpleado();
+      } catch (error) {
+        console.error('Error al actualizar el departamento:', error);
+      } finally {
+        cargando.value = false;
+      }
+    };
+
+    const recargarEmpleado = async () => {
+      if (!props.empleado.id_empleado) return;
+
+      cargando.value = true;
+
+      try {
+        const empleadoActualizado = await empleadosStore.fetchEmpleadoById(props.empleado.id_empleado);
+
+        emit('empleado-actualizado', empleadoActualizado);
+      } catch (error) {
+        console.error('Error al recargar los datos del empleado:', error);
+      } finally {
+        cargando.value = false;
+      }
+    };
+
+    watch(() => props.saveTriggered, async (newValue, oldValue) => {
+      if (newValue && !oldValue && needsReload.value) {
+        await recargarEmpleado();
+        needsReload.value = false;
+      }
+    });
+
+    const formatDate = (dateString) => {
+      if (!dateString) return "No especificada";
+
+      const date = new Date(dateString);
       return date.toLocaleDateString("es-ES", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
-      })
-    },
-    
-    handleCentroChange() {
-      this.$emit('centro-change', this.empleado.id_centro)
-    }
+      });
+    };
+
+    return {
+      departamentosFiltrados,
+      handleCentroChange,
+      handleDepartamentoChange,
+      formatDate,
+      cargando,
+      recargarEmpleado
+    };
   }
 }
 </script>
@@ -186,6 +273,29 @@ export default {
 
 .card-body {
   padding: 1.5rem;
+  position: relative;
+}
+
+.loading-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: #f9fafb;
+  border-radius: 0.375rem;
+  border: 1px solid #e5e7eb;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #dc2626;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 0.5rem;
 }
 
 .form-grid {
@@ -244,6 +354,12 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
