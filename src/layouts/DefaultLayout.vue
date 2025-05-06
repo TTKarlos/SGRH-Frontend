@@ -55,16 +55,6 @@
 
             <router-link
                 v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})"
-                to="/documentos"
-                class="nav-item"
-                @click="closeSidebarOnMobile"
-            >
-              <FileText class="nav-icon" size="18" />
-              <span class="nav-text">Documentos</span>
-            </router-link>
-
-            <router-link
-                v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})"
                 to="/centros"
                 class="nav-item"
                 @click="closeSidebarOnMobile"
