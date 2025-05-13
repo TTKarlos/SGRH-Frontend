@@ -50,6 +50,38 @@
             </router-link>
           </div>
 
+          <!-- Sección de Contratos -->
+          <div class="nav-section" v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})">
+            <span class="nav-section-title">Contratos</span>
+
+            <router-link
+                to="/tipos-contrato"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <FileText class="nav-icon" size="18" />
+              <span class="nav-text">Tipos de Contrato</span>
+            </router-link>
+
+            <router-link
+                to="/empresas"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <Building2 class="nav-icon" size="18" />
+              <span class="nav-text">Empresas</span>
+            </router-link>
+
+            <router-link
+                to="/convenios"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <FileText class="nav-icon" size="18" />
+              <span class="nav-text">Convenios</span>
+            </router-link>
+          </div>
+
           <div class="nav-section" v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})">
             <span class="nav-section-title">Administración</span>
 
@@ -175,6 +207,10 @@ export default {
         centros: 'Centros',
         departamentos: 'Departamentos',
         zonas: 'Zonas',
+        'tipos-contrato': 'Tipos de Contrato',
+        empresas: 'Empresas',
+        convenios: 'Convenios',
+        'categorias-convenio': 'Categorías de Convenio',
         unauthorized: 'Acceso Denegado',
         'not-found': 'Página No Encontrada'
       };

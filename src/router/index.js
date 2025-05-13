@@ -13,6 +13,9 @@ import RolesGestion from "../views/roles/RolesGestion.vue";
 import CentrosGestion from "../views/centros/CentrosGestion.vue";
 import DepartamentosGestion from "../views/departamentos/DepartamentosGestion.vue";
 import ZonasGestion from "../views/zonas/ZonasGestion.vue";
+import TiposContratoView from "../views/contratos/TiposContratoView.vue";
+import EmpresasView from "../views/empresas/EmpresasView.vue";
+import ConveniosView from "../views/convenios/ConveniosView.vue";
 import Unauthorized from "../views/errors/Unauthorized.vue";
 import NotFound from "../views/errors/NotFound.vue";
 
@@ -135,6 +138,36 @@ const routes = [
             requiresAuth: true,
             requiredPermission: { nombre: 'Master', tipo: 'Escritura' },
             title: 'Gestión de Zonas'
+        },
+    },
+    {
+        path: '/tipos-contrato',
+        name: 'tipos-contrato',
+        component: TiposContratoView,
+        meta: {
+            title: 'Tipos de Contrato',
+            icon: 'FileText',
+            requiredPermission: { nombre: 'Master', tipo: 'Escritura' },
+        },
+    },
+    {
+        path: '/empresas',
+        name: 'empresas',
+        component: EmpresasView,
+        meta: {
+            title: 'Empresas',
+            icon: 'Building',
+            requiredPermission: { nombre: 'Master', tipo: 'Escritura' },
+        },
+    },
+    {
+        path: '/convenios',
+        name: 'convenios',
+        component: ConveniosView,
+        meta: {
+            title: 'Convenios Colectivos',
+            icon: 'FileContract',
+            requiredPermission: { nombre: 'Master', tipo: 'Escritura' },
         },
     },
     {

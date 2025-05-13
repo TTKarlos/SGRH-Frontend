@@ -49,6 +49,7 @@
             :canViewDocuments="canViewDocuments"
             :canViewFormacion="canViewFormacion"
             :canViewAusencias="canViewAusencias"
+            :canViewContratos="canViewContratos"
             @change-tab="activeTab = $event"
         />
 
@@ -112,6 +113,22 @@
               @delete-ausencia="deleteAusencia"
               @reload="loadAusencias"
               @save-ausencia="saveAusencia"
+          />
+
+          <!-- Contratos -->
+          <ContratosTab
+              v-if="activeTab === 'contratos' && canViewContratos"
+              :contratos="contratosStore.contratos"
+              :loading="contratosStore.loading"
+              :error="contratosStore.error"
+              :canEdit="canEditContratos"
+              :id_empleado="empleadoId"
+              @add-contrato="showContratoModal = true"
+              @edit-contrato="editContrato"
+              @delete-contrato="deleteContrato"
+              @reload="loadContratos"
+              @save-contrato="saveContrato"
+              @previsualizar="previsualizarContrato"
           />
         </div>
       </div>
@@ -236,6 +253,22 @@
           @validation-error="handleAusenciaValidationError"
       />
 
+      <!-- Modal de Contrato -->
+      <ContratoModal
+          v-if="showContratoModal"
+          :value="contratoForm"
+          :loading="savingContrato"
+          :validation-errors="contratoValidationErrors"
+          :tipos-contrato="tiposContratoStore.tiposContrato"
+          :empresas="empresasStore.empresas"
+          :convenios="conveniosStore.convenios"
+          :categorias="categoriasConvenioStore.getCategoriasByConvenioId(contratoForm.id_convenio)"
+          @close="closeContratoModal"
+          @save="saveContrato"
+          @validation-error="handleContratoValidationError"
+          @convenio-change="handleConvenioChange"
+      />
+
       <!-- Modal de confirmación de eliminación de formación -->
       <div v-if="showDeleteFormacionModal" class="modal-overlay">
         <div class="modal-container">
@@ -297,6 +330,99 @@
           </div>
         </div>
       </div>
+
+      <!-- Modal de confirmación de eliminación de contrato -->
+      <div v-if="showDeleteContratoModal" class="modal-overlay">
+        <div class="modal-container">
+          <div class="modal-header">
+            <h3>Confirmar eliminación</h3>
+            <button @click="showDeleteContratoModal = false" class="btn-close">
+              <X size="18" />
+            </button>
+          </div>
+          <div class="modal-body">
+            <p>¿Está seguro de que desea eliminar este contrato?</p>
+            <p>Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="modal-footer">
+            <button @click="showDeleteContratoModal = false" class="btn btn-secondary">
+              Cancelar
+            </button>
+            <button @click="confirmDeleteContrato" class="btn btn-danger" :disabled="deletingContrato">
+              <Trash2 v-if="!deletingContrato" size="18" class="btn-icon" />
+              <Loader v-else size="18" class="btn-icon animate-spin" />
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal de previsualización de contrato -->
+      <div v-if="contratoPreview && canViewContratos" class="modal-overlay">
+        <div class="modal-container modal-lg">
+          <div class="modal-header">
+            <h3>Contrato</h3>
+            <div class="modal-header-actions">
+              <button @click="descargarContrato(contratoPreview)" class="btn-icon-only" title="Descargar">
+                <Download size="18" />
+              </button>
+              <button @click="cerrarPreviewContrato" class="btn-close">
+                <X size="18" />
+              </button>
+            </div>
+          </div>
+          <div class="modal-body preview-container">
+            <!-- Estado de carga -->
+            <div v-if="cargandoPreviewContrato" class="preview-loading">
+              <Loader size="32" class="animate-spin" />
+              <p>Cargando vista previa...</p>
+            </div>
+
+            <!-- Estado de error -->
+            <div v-else-if="errorPreviewContrato" class="preview-error">
+              <AlertTriangle size="32" />
+              <p>{{ errorPreviewContrato }}</p>
+            </div>
+
+            <!-- Vista previa del contrato -->
+            <template v-else-if="urlPreviewContrato">
+              <!-- Vista previa para PDF -->
+              <iframe
+                  v-if="esContratoTipoPDF"
+                  :src="urlPreviewContrato"
+                  class="documento-preview"
+                  frameborder="0"
+                  title="Vista previa del contrato"
+              ></iframe>
+
+              <!-- Vista previa para imágenes -->
+              <img
+                  v-else-if="esContratoTipoImagen"
+                  :src="urlPreviewContrato"
+                  class="imagen-preview"
+                  alt="Vista previa del contrato"
+              />
+
+              <!-- Mensaje para otros tipos de archivo -->
+              <div v-else class="preview-no-disponible">
+                <FileText size="48" class="empty-icon" />
+                <p>Este tipo de documento no se puede previsualizar.</p>
+                <p>Puede descargar el documento para verlo.</p>
+                <button @click="descargarContrato(contratoPreview)" class="btn btn-primary">
+                  <Download size="16" class="btn-icon" />
+                  Descargar archivo
+                </button>
+              </div>
+            </template>
+
+            <!-- Sin URL de vista previa -->
+            <div v-else class="preview-no-disponible">
+              <AlertTriangle size="32" />
+              <p>No se pudo generar la vista previa del contrato.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </DefaultLayout>
 </template>
@@ -312,6 +438,11 @@ import { useCentrosStore } from "../../stores/centros"
 import { useFormacionEmpleadosStore } from "../../stores/formacionEmpleados"
 import { useAusenciasStore } from "../../stores/ausencias"
 import { useTiposAusenciaStore } from "../../stores/tiposAusencia"
+import { useContratosStore } from "../../stores/contratos"
+import { useTiposContratoStore } from "../../stores/tiposContrato"
+import { useEmpresasStore } from "../../stores/empresas"
+import { useConveniosStore } from "../../stores/convenios"
+import { useCategoriasConvenioStore } from "../../stores/categoriasConvenio"
 import { validateEmpleado } from "../../validation/empleadoSchema"
 import DefaultLayout from "../../layouts/DefaultLayout.vue"
 import LoadingSpinner from "../../components/common/LoadingSpinner.vue"
@@ -323,8 +454,10 @@ import DatosPersonalesTab from "../../components/empleados/detalle/tabs/DatosPer
 import InformacionLaboralTab from "../../components/empleados/detalle/tabs/InformacionLaboralTab.vue"
 import FormacionTab from "../../components/empleados/detalle/tabs/FormacionTab.vue"
 import AusenciasTab from "../../components/empleados/detalle/tabs/AusenciasTab.vue"
+import ContratosTab from "../../components/empleados/detalle/tabs/ContratosTab.vue"
 import FormacionModal from "../../components/empleados/detalle/modals/FormacionModal.vue"
 import AusenciaModal from "../../components/empleados/detalle/modals/AusenciaModal.vue"
+import ContratoModal from "../../components/empleados/detalle/modals/ContratoModal.vue"
 
 import {
   AlertTriangle,
@@ -348,8 +481,10 @@ export default {
     InformacionLaboralTab,
     FormacionTab,
     AusenciasTab,
+    ContratosTab,
     FormacionModal,
     AusenciaModal,
+    ContratoModal,
     AlertTriangle,
     Trash2,
     X,
@@ -376,6 +511,11 @@ export default {
       formacionesStore: useFormacionEmpleadosStore(),
       ausenciasStore: useAusenciasStore(),
       tiposAusenciaStore: useTiposAusenciaStore(),
+      contratosStore: useContratosStore(),
+      tiposContratoStore: useTiposContratoStore(),
+      empresasStore: useEmpresasStore(),
+      conveniosStore: useConveniosStore(),
+      categoriasConvenioStore: useCategoriasConvenioStore(),
 
       activeTab: "personal",
       showDeleteModal: false,
@@ -414,7 +554,28 @@ export default {
       showDeleteAusenciaModal: false,
       ausenciaToDelete: null,
       deletingAusencia: false,
-      tipoAusenciaEnCarga: {}
+      tipoAusenciaEnCarga: {},
+
+      showContratoModal: false,
+      contratoForm: {
+        id_tipo_contrato: '',
+        id_empresa: '',
+        id_convenio: null,
+        id_categoria: null,
+        fecha_inicio: '',
+        fecha_fin: '',
+        fin_periodo_prueba: '',
+        id_empleado: null
+      },
+      contratoValidationErrors: {},
+      savingContrato: false,
+      showDeleteContratoModal: false,
+      contratoToDelete: null,
+      deletingContrato: false,
+      contratoPreview: null,
+      urlPreviewContrato: null,
+      cargandoPreviewContrato: false,
+      errorPreviewContrato: null
     }
   },
 
@@ -455,6 +616,14 @@ export default {
       return this.authStore.hasPermission({ nombre: "Ausencias", tipo: "Escritura" })
     },
 
+    canViewContratos() {
+      return this.authStore.hasPermission({ nombre: "Contratos", tipo: "Lectura" })
+    },
+
+    canEditContratos() {
+      return this.authStore.hasPermission({ nombre: "Contratos", tipo: "Escritura" })
+    },
+
     esPDF() {
       if (!this.documentoPreview) return false
 
@@ -472,6 +641,25 @@ export default {
 
       const nombreOriginal = this.documentoPreview.nombre_original?.toLowerCase() || ''
       return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
+    },
+
+    esContratoTipoPDF() {
+      if (!this.contratoPreview) return false
+
+      if (this.contratoPreview.mimetype === 'application/pdf') return true
+
+      const nombreOriginal = this.contratoPreview.nombre_original?.toLowerCase() || ''
+      return nombreOriginal.endsWith('.pdf')
+    },
+
+    esContratoTipoImagen() {
+      if (!this.contratoPreview) return false
+
+      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
+      if (this.contratoPreview.mimetype && imageTypes.includes(this.contratoPreview.mimetype)) return true
+
+      const nombreOriginal = this.contratoPreview.nombre_original?.toLowerCase() || ''
+      return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
     }
   },
 
@@ -487,6 +675,10 @@ export default {
         if (this.canViewAusencias) {
           this.loadAusencias()
         }
+
+        if (this.canViewContratos) {
+          this.loadContratos()
+        }
       },
       immediate: true
     },
@@ -496,6 +688,8 @@ export default {
         this.loadFormaciones()
       } else if (newTab === 'ausencias' && this.canViewAusencias) {
         this.loadAusencias()
+      } else if (newTab === 'contratos' && this.canViewContratos) {
+        this.loadContratos()
       }
     }
   },
@@ -506,6 +700,12 @@ export default {
 
     if (this.canViewAusencias) {
       this.loadTiposAusencia()
+    }
+
+    if (this.canViewContratos) {
+      this.loadTiposContrato()
+      this.loadEmpresas()
+      this.loadConvenios()
     }
   },
 
@@ -981,6 +1181,246 @@ export default {
         console.error(`Error al cargar tipo de ausencia con ID ${id}:`, error)
       } finally {
         this.tipoAusenciaEnCarga[id] = false
+      }
+    },
+
+    async loadContratos() {
+      if (!this.empleadoId || !this.canViewContratos) return
+      await this.contratosStore.fetchContratosByEmpleado(this.empleadoId)
+    },
+
+    async loadTiposContrato() {
+      if (!this.canViewContratos) return
+      await this.tiposContratoStore.fetchTiposContrato()
+    },
+
+    async loadEmpresas() {
+      if (!this.canViewContratos) return
+      await this.empresasStore.fetchEmpresas()
+    },
+
+    async loadConvenios() {
+      if (!this.canViewContratos) return
+      await this.conveniosStore.fetchConvenios()
+    },
+
+    async loadCategoriasForConvenio(idConvenio) {
+      if (!idConvenio || !this.canViewContratos) return
+      await this.categoriasConvenioStore.fetchCategoriasByConvenio(idConvenio)
+    },
+
+    closeContratoModal() {
+      this.showContratoModal = false
+      this.contratoForm = {
+        id_tipo_contrato: '',
+        id_empresa: '',
+        id_convenio: null,
+        id_categoria: null,
+        fecha_inicio: '',
+        fecha_fin: '',
+        fin_periodo_prueba: '',
+        id_empleado: null
+      }
+      this.contratoValidationErrors = {}
+    },
+
+    editContrato(contrato) {
+      this.contratoForm = {
+        id_contrato: contrato.id_contrato,
+        id_tipo_contrato: contrato.id_tipo_contrato,
+        id_empresa: contrato.id_empresa,
+        id_convenio: contrato.id_convenio,
+        id_categoria: contrato.id_categoria,
+        fecha_inicio: contrato.fecha_inicio,
+        fecha_fin: contrato.fecha_fin,
+        fin_periodo_prueba: contrato.fin_periodo_prueba,
+        observaciones: contrato.observaciones,
+        id_empleado: this.empleadoId
+      }
+
+      if (contrato.id_convenio) {
+        this.loadCategoriasForConvenio(contrato.id_convenio)
+      }
+
+      this.showContratoModal = true
+    },
+
+    async saveContrato(contratoData) {
+      if (!this.canEditContratos) {
+        this.notificationStore.error('No tiene permisos para editar contratos', 'Error de permisos')
+        return
+      }
+
+      this.savingContrato = true
+      this.contratoValidationErrors = {}
+
+      try {
+        if (contratoData instanceof FormData) {
+          contratoData.set('id_empleado', this.empleadoId)
+        } else {
+          contratoData.id_empleado = this.empleadoId
+        }
+
+        let result
+        if (this.contratoForm.id_contrato) {
+          result = await this.contratosStore.updateContrato(this.contratoForm.id_contrato, contratoData)
+        } else {
+          result = await this.contratosStore.createContrato(contratoData)
+        }
+
+        if (result) {
+          await this.loadContratos()
+          this.closeContratoModal()
+          this.notificationStore.success(
+              "El contrato ha sido guardado correctamente.",
+              "Contrato guardado"
+          )
+        }
+      } catch (error) {
+        console.error("Error al guardar contrato:", error)
+
+        if (error.response?.data?.errors) {
+          this.contratoValidationErrors = error.response.data.errors
+        } else {
+          this.notificationStore.error(
+              error.message || "Ha ocurrido un error al guardar el contrato",
+              "Error"
+          )
+        }
+      } finally {
+        this.savingContrato = false
+      }
+    },
+
+    handleContratoValidationError(error) {
+      console.error("Error de validación:", error)
+
+      if (error.type) {
+        this.contratoValidationErrors = {
+          [error.type]: error.message
+        }
+      } else {
+        this.contratoValidationErrors = {
+          general: error.message
+        }
+      }
+    },
+
+    handleConvenioChange(idConvenio) {
+      this.loadCategoriasForConvenio(idConvenio)
+    },
+
+    deleteContrato(contrato) {
+      this.contratoToDelete = contrato
+      this.showDeleteContratoModal = true
+    },
+
+    async confirmDeleteContrato() {
+      if (!this.canEditContratos) {
+        this.notificationStore.error('No tiene permisos para eliminar contratos', 'Error de permisos')
+        return
+      }
+
+      this.deletingContrato = true
+
+      try {
+        const success = await this.contratosStore.deleteContrato(this.contratoToDelete.id_contrato)
+
+        if (success) {
+          await this.loadContratos()
+          this.showDeleteContratoModal = false
+          this.contratoToDelete = null
+          this.notificationStore.success(
+              "El contrato ha sido eliminado correctamente.",
+              "Contrato eliminado"
+          )
+        }
+      } catch (error) {
+        console.error("Error al eliminar contrato:", error)
+        this.notificationStore.error(
+            error.message || "Ha ocurrido un error al eliminar el contrato",
+            "Error"
+        )
+      } finally {
+        this.deletingContrato = false
+      }
+    },
+
+    async previsualizarContrato(contrato) {
+      if (!this.canViewContratos) {
+        this.notificationStore.error('No tiene permisos para ver contratos', 'Error de permisos')
+        return
+      }
+
+      if (!contrato || !contrato.ruta_archivo) {
+        this.notificationStore.warning('Este contrato no tiene un documento adjunto', 'Sin documento')
+        return
+      }
+
+      this.contratoPreview = contrato
+      this.cargandoPreviewContrato = true
+      this.errorPreviewContrato = null
+      this.urlPreviewContrato = null
+
+      try {
+        const url = await this.contratosStore.downloadContrato(contrato.id_contrato)
+
+        if (!url) {
+          throw new Error("No se pudo generar la URL de previsualización")
+        }
+
+        this.urlPreviewContrato = url
+      } catch (error) {
+        console.error("Error al obtener vista previa del contrato:", error)
+
+        let mensajeError = error.message || "No se pudo cargar la vista previa del contrato"
+
+        if (error.response) {
+          const status = error.response.status
+          if (status === 404) {
+            mensajeError = "El documento del contrato no existe o no está disponible"
+          } else if (status === 403) {
+            mensajeError = "No tiene permisos para ver este contrato"
+          } else {
+            mensajeError = `Error del servidor (${status}): ${error.response.statusText}`
+          }
+        }
+
+        this.errorPreviewContrato = mensajeError
+        this.notificationStore.warning(this.errorPreviewContrato, "Error de previsualización")
+      } finally {
+        this.cargandoPreviewContrato = false
+      }
+    },
+
+    cerrarPreviewContrato() {
+      if (this.urlPreviewContrato) {
+        URL.revokeObjectURL(this.urlPreviewContrato)
+      }
+      this.contratoPreview = null
+      this.urlPreviewContrato = null
+      this.errorPreviewContrato = null
+    },
+
+    async descargarContrato(contrato) {
+      if (!this.canViewContratos) {
+        this.notificationStore.error('No tiene permisos para descargar contratos', 'Error de permisos')
+        return
+      }
+
+      if (!contrato || !contrato.ruta_archivo) {
+        this.notificationStore.warning('Este contrato no tiene un documento adjunto', 'Sin documento')
+        return
+      }
+
+      try {
+        await this.contratosStore.downloadContrato(contrato.id_contrato)
+      } catch (error) {
+        console.error("Error al descargar contrato:", error)
+        this.notificationStore.error(
+            error.message || "Ha ocurrido un error al descargar el contrato",
+            "Error al descargar"
+        )
       }
     }
   }
