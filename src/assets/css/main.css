@@ -1,0 +1,235 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+:root {
+    --color-text: #333333;
+    --color-text-muted: #6b7280;
+    --color-bg-hover: #f3f4f6;
+    --color-primary: #4361ee;
+    --color-primary-dark: #3a56d4;
+    --color-primary-rgb: 67, 97, 238;
+    --color-secondary: #9ca3af;
+    --color-secondary-dark: #6b7280;
+    --color-success: #10b981;
+    --color-success-dark: #059669;
+    --color-success-bg: #dcfce7;
+    --color-danger: #ef4444;
+    --color-danger-dark: #dc2626;
+    --color-danger-bg: #fee2e2;
+    --color-border: #e5e7eb;
+    --color-bg-card: #ffffff;
+    --color-bg-input: #ffffff;
+
+    --primary-color: #3b82f6;
+    --primary-color-dark: #2563eb;
+    --primary-color-light: #dbeafe;
+
+    --secondary-color: #64748b;
+    --secondary-color-light: #f1f5f9;
+    --secondary-color-lighter: #e2e8f0;
+
+    --success-color: #10b981;
+    --success-color-dark: #059669;
+    --success-color-light: #d1fae5;
+
+    --danger-color: #ef4444;
+    --danger-color-dark: #dc2626;
+    --danger-color-light: #fee2e2;
+
+    --warning-color: #f59e0b;
+    --warning-color-dark: #d97706;
+    --warning-color-light: #fef3c7;
+
+    --info-color: #0ea5e9;
+    --info-color-dark: #0284c7;
+    --info-color-light: #e0f2fe;
+
+    --text-color: #1e293b;
+    --text-color-secondary: #64748b;
+
+    --background-color: #f8fafc;
+    --background-color-light: #f1f5f9;
+
+    --border-color: #e2e8f0;
+}
+
+/* Estilos de botones globales */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-icon {
+    margin-right: 0.5rem;
+}
+
+.btn-ghost {
+    background-color: transparent;
+    color: var(--color-text);
+}
+
+.btn-ghost:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-dark);
+}
+
+.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: var(--color-success-dark);
+}
+
+.btn-secondary {
+    background-color: var(--color-secondary);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-secondary-dark);
+}
+
+.btn-danger {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: var(--color-danger-dark);
+}
+
+.btn-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.btn-status-active {
+    background-color: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+.btn-status-inactive {
+    background-color: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+/* Estilos globales */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #374151;
+    background-color: #f9fafb;
+}
+
+.loading-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+}
+
+/* Estilos de botones globales */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-size: 0.95rem;
+}
+
+.btn-icon {
+    margin-right: 0.5rem;
+}
+
+.btn-ghost {
+    background-color: transparent;
+    color: var(--color-text);
+}
+
+.btn-ghost:hover {
+    background-color: var(--color-bg-hover);
+}
+
+.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-dark);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: var(--color-success-dark);
+}
+
+.btn-secondary {
+    background-color: var(--color-secondary);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: var(--color-secondary-dark);
+}
+
+.btn-danger {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: var(--color-danger-dark);
+}
+
+/* Animaciones */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+}
