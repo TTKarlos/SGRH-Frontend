@@ -187,7 +187,6 @@
           </div>
           <div class="modal-body">
             <p>¿Está seguro que desea eliminar el centro <strong>{{ centroToDelete?.nombre || 'seleccionado' }}</strong>?</p>
-            <p class="text-danger">Esta acción no se puede deshacer y eliminará todos los departamentos asociados.</p>
           </div>
           <div class="modal-footer">
             <button @click="closeDeleteModal" class="btn-secondary">Cancelar</button>

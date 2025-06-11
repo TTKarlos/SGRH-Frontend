@@ -10,17 +10,22 @@
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label for="nombre">Nombre del Rol</label>
+          <label for="nombre">Nombre del Rol *</label>
           <input
               id="nombre"
               v-model="localRolForm.nombre"
               type="text"
               class="form-control"
               :class="{ 'is-invalid': validationErrors.nombre }"
-              placeholder="Nombre del rol"
+              placeholder="Ej: Administrador, Usuario, Supervisor"
+              maxlength="50"
+              @input="updateParentForm"
           />
           <div v-if="validationErrors.nombre" class="invalid-feedback">
             {{ validationErrors.nombre }}
+          </div>
+          <div class="form-hint">
+            El nombre debe ser único y descriptivo
           </div>
         </div>
 
@@ -30,19 +35,25 @@
               id="descripcion"
               v-model="localRolForm.descripcion"
               class="form-control"
-              placeholder="Descripción del rol"
+              placeholder="Describe las responsabilidades y alcance de este rol"
               rows="3"
+              maxlength="255"
+              @input="updateParentForm"
           ></textarea>
+          <div class="character-count">
+            {{ localRolForm.descripcion.length }}/255 caracteres
+          </div>
         </div>
       </div>
       <div class="modal-footer">
         <button @click="closeModal" class="btn-cancel">
+          <X size="16" class="btn-icon" />
           Cancelar
         </button>
-        <button @click="saveRol" class="btn-save" :disabled="savingRol">
+        <button @click="saveRol" class="btn-save" :disabled="savingRol || !isFormValid">
           <Loader v-if="savingRol" size="16" class="btn-icon spinner" />
           <Save v-else size="16" class="btn-icon" />
-          Guardar
+          {{ showEditModal ? 'Actualizar' : 'Crear Rol' }}
         </button>
       </div>
     </div>
@@ -179,6 +190,7 @@
         </div>
         <div class="footer-actions">
           <button @click="closeModal" class="btn-cancel">
+            <X size="16" class="btn-icon" />
             Cancelar
           </button>
           <button @click="savePermisos" class="btn-save" :disabled="savingPermisos">
@@ -206,17 +218,30 @@
             <AlertTriangle size="48" />
           </div>
           <p>¿Está seguro de que desea eliminar el rol <strong>{{ rolToDelete?.nombre }}</strong>?</p>
-          <p class="text-danger">Esta acción no se puede deshacer.</p>
+          <p class="text-danger">Esta acción no se puede deshacer y puede afectar a los usuarios asignados a este rol.</p>
+
+          <div class="warning-box">
+            <div class="warning-header">
+              <AlertTriangle size="16" />
+              <span>Advertencia</span>
+            </div>
+            <ul class="warning-list">
+              <li>Los usuarios con este rol perderán sus permisos asociados</li>
+              <li>Se recomienda reasignar usuarios antes de eliminar</li>
+              <li>Esta acción es irreversible</li>
+            </ul>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
         <button @click="closeModal" class="btn-cancel">
+          <X size="16" class="btn-icon" />
           Cancelar
         </button>
         <button @click="deleteRol" class="btn-delete" :disabled="deletingRol">
           <Loader v-if="deletingRol" size="16" class="btn-icon spinner" />
           <Trash2 v-else size="16" class="btn-icon" />
-          Eliminar
+          Eliminar Definitivamente
         </button>
       </div>
     </div>
@@ -265,7 +290,7 @@ export default {
       default: () => ({})
     }
   },
-  emits: ['close', 'save-rol', 'save-permisos', 'delete-rol', 'update:selected-permisos'],
+  emits: ['close', 'save-rol', 'save-permisos', 'delete-rol', 'update:selected-permisos', 'update-rol-form'],
   data() {
     return {
       localRolForm: { nombre: '', descripcion: '' },
@@ -274,11 +299,13 @@ export default {
     };
   },
   computed: {
+    isFormValid() {
+      return this.localRolForm.nombre && this.localRolForm.nombre.trim().length > 0;
+    },
     isAllSelected() {
       const allPermisos = Object.values(this.permisosAgrupados).flat();
       return allPermisos.length > 0 && allPermisos.every(p => this.isPermisoSelected(p.id_permiso));
     },
-
     filteredActiveModulePermissions() {
       const modulePermisos = this.permisosAgrupados[this.activeModule] || [];
 
@@ -298,7 +325,8 @@ export default {
       handler(newVal) {
         this.localRolForm = { ...newVal };
       },
-      immediate: true
+      immediate: true,
+      deep: true
     },
     permisosAgrupados: {
       handler(newVal) {
@@ -314,7 +342,15 @@ export default {
       this.$emit('close');
     },
 
+    updateParentForm() {
+      this.$emit('update-rol-form', this.localRolForm);
+    },
+
     saveRol() {
+      if (!this.localRolForm.nombre || !this.localRolForm.nombre.trim()) {
+        return;
+      }
+
       this.$emit('save-rol');
     },
 
@@ -413,7 +449,7 @@ export default {
           : `${baseDesc} (creación, edición y eliminación)`;
     }
   }
-}
+};
 </script>
 
 <style scoped>
@@ -435,10 +471,10 @@ export default {
 
 .modal-container {
   background-color: white;
-  border-radius: 8px;
+  border-radius: 12px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -455,9 +491,9 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 24px;
+  padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
 }
 
 .modal-title {
@@ -474,16 +510,17 @@ export default {
 }
 
 .role-badge {
-  background-color: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: white;
-  padding: 4px 10px;
-  border-radius: 16px;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
 }
 
 .delete-header {
-  background-color: #fee2e2;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
   border-bottom: 1px solid #fecaca;
 }
 
@@ -496,12 +533,12 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: all 0.2s;
 }
 
 .btn-close:hover {
-  background-color: #f3f4f6;
+  background-color: rgba(0, 0, 0, 0.05);
   color: #111827;
 }
 
@@ -519,9 +556,9 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding: 16px 24px;
+  padding: 20px 24px;
   border-top: 1px solid #e5e7eb;
-  background-color: #f9fafb;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
 }
 
 .permissions-footer {
@@ -542,7 +579,7 @@ export default {
 }
 
 .form-group {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .form-group label {
@@ -555,30 +592,123 @@ export default {
 
 .form-control {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
   font-size: 14px;
   transition: all 0.2s;
   font-family: 'Poppins', sans-serif;
+  background-color: #fafafa;
 }
 
 .form-control:focus {
   outline: none;
   border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  background-color: white;
 }
 
 .form-control.is-invalid {
   border-color: #dc2626;
+  background-color: #fef2f2;
 }
 
 .invalid-feedback {
   display: block;
   width: 100%;
   margin-top: 6px;
-  font-size: 14px;
+  font-size: 13px;
   color: #dc2626;
+  font-weight: 500;
+}
+
+.form-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.character-count {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  text-align: right;
+}
+
+.form-preview {
+  margin-top: 20px;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.form-preview h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.role-preview-card {
+  background: white;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.role-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.role-preview-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.role-preview-badge {
+  background-color: #10b981;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.role-preview-description {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.warning-box {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #fef3cd;
+  border: 1px solid #fbbf24;
+  border-radius: 8px;
+}
+
+.warning-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #92400e;
+}
+
+.warning-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #92400e;
+}
+
+.warning-list li {
+  margin-bottom: 4px;
+  font-size: 13px;
 }
 
 .loading-container {
@@ -636,11 +766,13 @@ export default {
   color: #dc2626;
   font-size: 12px;
   cursor: pointer;
-  padding: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .btn-select-all:hover {
-  text-decoration: underline;
+  background-color: #fef2f2;
 }
 
 .sidebar-content {
@@ -695,7 +827,7 @@ export default {
 
 .progress {
   height: 100%;
-  background-color: #dc2626;
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);
   transition: width 0.3s ease;
 }
 
@@ -767,7 +899,7 @@ export default {
 .search-input:focus {
   outline: none;
   border-color: #dc2626;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .search-icon {
@@ -782,7 +914,7 @@ export default {
   background-color: #fef2f2;
   border: 1px solid #fee2e2;
   color: #dc2626;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
@@ -807,7 +939,7 @@ export default {
 }
 
 .permission-card {
-  border: 1px solid #e5e7eb;
+  border: 2px solid #e5e7eb;
   border-radius: 8px;
   padding: 16px;
   cursor: pointer;
@@ -817,12 +949,14 @@ export default {
 
 .permission-card:hover {
   border-color: #dc2626;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .permission-card.selected {
   background-color: #fef2f2;
   border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .permission-header {
@@ -853,8 +987,9 @@ export default {
   height: 18px;
   width: 18px;
   background-color: white;
-  border: 1px solid #d1d5db;
+  border: 2px solid #d1d5db;
   border-radius: 4px;
+  transition: all 0.2s;
 }
 
 .permission-card.selected .checkmark {
@@ -886,20 +1021,20 @@ export default {
 }
 
 .permission-type {
-  padding: 2px 8px;
+  padding: 4px 8px;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
 }
 
 .type-read {
-  background-color: #fee2e2;
-  color: #b91c1c;
+  background-color: #dbeafe;
+  color: #1e40af;
 }
 
 .type-write {
-  background-color: #fecaca;
-  color: #991b1b;
+  background-color: #fee2e2;
+  color: #b91c1c;
 }
 
 .permission-description {
@@ -927,48 +1062,54 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   font-family: 'Poppins', sans-serif;
-}
-
-.btn-save {
-  background-color: #dc2626;
-  color: white;
   border: none;
 }
 
+.btn-save {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
 .btn-save:hover:not(:disabled) {
-  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
 }
 
 .btn-cancel {
   background-color: white;
   color: #4b5563;
-  border: 1px solid #d1d5db;
+  border: 2px solid #d1d5db;
 }
 
 .btn-cancel:hover {
   background-color: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .btn-delete {
-  background-color: #dc2626;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   color: white;
-  border: none;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
 }
 
 .btn-delete:hover:not(:disabled) {
-  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
 }
 
 .btn-save:disabled, .btn-delete:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-icon {
@@ -1030,6 +1171,15 @@ export default {
 
   .permissions-grid {
     grid-template-columns: 1fr;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .search-input {
+    width: 100%;
   }
 }
 </style>

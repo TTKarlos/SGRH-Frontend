@@ -49,6 +49,7 @@
           @save-rol="saveRol"
           @save-permisos="savePermisos"
           @delete-rol="deleteRol"
+          @update-rol-form="updateRolForm"
       />
     </div>
   </DefaultLayout>
@@ -235,6 +236,7 @@ export default {
 
     handleCreateRole() {
       this.rolForm = { nombre: '', descripcion: '' };
+      this.validationErrors = {};
       this.showCreateModal = true;
     },
 
@@ -251,6 +253,7 @@ export default {
         nombre: rol.nombre,
         descripcion: rol.descripcion
       };
+      this.validationErrors = {};
       this.currentRol = rol;
       this.showEditModal = true;
     },
@@ -313,10 +316,18 @@ export default {
       }
     },
 
+    updateRolForm(formData) {
+      this.rolForm = { ...formData };
+      if (formData.nombre && formData.nombre.trim()) {
+        this.validationErrors = { ...this.validationErrors };
+        delete this.validationErrors.nombre;
+      }
+    },
+
     async saveRol() {
       this.validationErrors = {};
 
-      if (!this.rolForm.nombre) {
+      if (!this.rolForm.nombre || !this.rolForm.nombre.trim()) {
         this.validationErrors.nombre = 'El nombre del rol es obligatorio';
         return;
       }
@@ -332,10 +343,17 @@ export default {
 
         await this.fetchRoles();
         this.closeAllModals();
+
+        this.$emit('show-notification', {
+          type: 'success',
+          message: this.showEditModal ? 'Rol actualizado correctamente' : 'Rol creado correctamente'
+        });
       } catch (err) {
         console.error('Error al guardar rol:', err);
         if (err.response && err.response.data && err.response.data.errors) {
           this.validationErrors = err.response.data.errors;
+        } else {
+          this.validationErrors.general = 'Error al guardar el rol. Inténtelo de nuevo.';
         }
       } finally {
         this.savingRol = false;
@@ -350,8 +368,17 @@ export default {
 
         await this.fetchRoles();
         this.closeAllModals();
+
+        this.$emit('show-notification', {
+          type: 'success',
+          message: 'Permisos actualizados correctamente'
+        });
       } catch (err) {
         console.error('Error al guardar permisos:', err);
+        this.$emit('show-notification', {
+          type: 'error',
+          message: 'Error al guardar los permisos. Inténtelo de nuevo.'
+        });
       } finally {
         this.savingPermisos = false;
       }
@@ -365,8 +392,17 @@ export default {
 
         await this.fetchRoles();
         this.closeAllModals();
+
+        this.$emit('show-notification', {
+          type: 'success',
+          message: 'Rol eliminado correctamente'
+        });
       } catch (err) {
         console.error('Error al eliminar rol:', err);
+        this.$emit('show-notification', {
+          type: 'error',
+          message: 'Error al eliminar el rol. Inténtelo de nuevo.'
+        });
       } finally {
         this.deletingRol = false;
       }
