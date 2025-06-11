@@ -1,6 +1,5 @@
 import * as yup from 'yup';
 
-// Esquema para crear un usuario
 export const createUserSchema = yup.object().shape({
     nombre_usuario: yup
         .string()
@@ -43,7 +42,6 @@ export const createUserSchema = yup.object().shape({
     activo: yup.boolean().default(true),
 });
 
-// Esquema para actualizar un usuario (similar pero sin requerir todos los campos)
 export const updateUserSchema = yup.object().shape({
     nombre_usuario: yup
         .string()
@@ -75,7 +73,6 @@ export const updateUserSchema = yup.object().shape({
     activo: yup.boolean(),
 });
 
-// Esquema para cambiar contraseña
 export const changePasswordSchema = yup.object().shape({
     currentPassword: yup
         .string()
@@ -89,7 +86,6 @@ export const changePasswordSchema = yup.object().shape({
         .notOneOf([yup.ref("currentPassword")], "La nueva contraseña debe ser diferente a la actual"),
 });
 
-// Esquema para resetear contraseña
 export const resetPasswordSchema = yup.object().shape({
     newPassword: yup
         .string()
@@ -98,7 +94,6 @@ export const resetPasswordSchema = yup.object().shape({
         .max(255, "La nueva contraseña no puede exceder los 255 caracteres"),
 });
 
-// Esquema para cambiar el estado de un usuario
 export const changeStatusSchema = yup.object().shape({
     activo: yup
         .boolean()

@@ -1,33 +1,54 @@
 <template>
   <div class="app-layout">
-    <!-- Mostrar spinner mientras se cargan los permisos -->
     <loading-spinner
         v-if="authStore.isAuthenticated && !authStore.permissionsLoaded"
         message="Cargando permisos de usuario..."
     />
 
     <template v-else>
+      <!-- Mobile Header - Always visible on mobile -->
+      <header class="mobile-header">
+        <div class="mobile-header-content">
+          <button class="mobile-menu-btn" @click="toggleSidebar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+          <div class="mobile-logo">
+            <img src="../assets/images/logo.png" alt="Logo Empresa" class="mobile-company-logo" />
+          </div>
+          <div class="mobile-user-avatar">
+            <span class="mobile-avatar-text">{{ userInitials }}</span>
+          </div>
+        </div>
+      </header>
+
       <aside class="sidebar" :class="{ 'sidebar-open': sidebarOpen }">
         <div class="sidebar-header">
-          <div class="logo">
-            <svg class="logo-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="3" width="18" height="18" rx="3" fill="#dc2626" />
-              <path d="M9 12L11 14L15 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-            <span class="logo-text">SGRH</span>
+          <div class="logo-container">
+            <img src="../assets/images/logo.png" alt="Logo Empresa" class="company-logo" />
           </div>
           <button class="sidebar-close" @click="closeSidebar">
-            <X size="18" />
+            <X size="20" />
           </button>
         </div>
 
         <div class="user-profile">
-          <div class="user-avatar">
-            <span class="avatar-text">{{ userInitials }}</span>
+          <div class="user-avatar-container">
+            <div class="user-avatar">
+              <span class="avatar-text">{{ userInitials }}</span>
+              <div class="avatar-status"></div>
+            </div>
           </div>
           <div class="user-info">
             <h3 class="user-name">{{ userName }}</h3>
             <p class="user-role">{{ userRole }}</p>
+            <div class="user-status">
+              <span class="status-dot"></span>
+              <span class="status-text">En línea</span>
+            </div>
           </div>
         </div>
 
@@ -50,7 +71,6 @@
             </router-link>
           </div>
 
-          <!-- Sección de Contratos -->
           <div class="nav-section" v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})">
             <span class="nav-section-title">Contratos</span>
 
@@ -84,6 +104,16 @@
 
           <div class="nav-section" v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})">
             <span class="nav-section-title">Administración</span>
+
+            <router-link
+                v-if="hasPermission({nombre: 'Informes', tipo: 'Lectura'})"
+                to="/informes"
+                class="nav-item"
+                @click="closeSidebarOnMobile"
+            >
+              <FileBarChart class="nav-icon" size="18" />
+              <span class="nav-text">Informes</span>
+            </router-link>
 
             <router-link
                 v-if="hasPermission({nombre: 'Master', tipo: 'Escritura'})"
@@ -140,91 +170,123 @@
         </div>
       </aside>
 
-      <div class="main-wrapper">
+      <div class="main-wrapper" :class="{ 'main-pushed': sidebarOpen && isMobile }">
         <main class="main-content">
           <slot></slot>
         </main>
       </div>
 
-      <div v-if="sidebarOpen" class="sidebar-overlay" @click="closeSidebar"></div>
+      <div v-if="sidebarOpen && isMobile" class="sidebar-overlay" @click="closeSidebar"></div>
     </template>
   </div>
 </template>
 
 <script>
-import { useAuthStore } from '../stores/auth';
-import LoadingSpinner from '../components/common/LoadingSpinner.vue';
-import {
-  Home,
-  Users,
-  UserCog,
-  Shield,
-  LogOut,
-  Menu,
-  X,
-  Search,
-  FileText,
-  Building2,
-  MapPin
-} from 'lucide-vue-next';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute } from 'vue-router';
+import { X } from 'lucide-vue-next';
+import { Home, Users, FileText, Building2, FileBarChart, MapPin, UserCog, Shield, LogOut } from 'lucide-vue-next';
+import { useAuthStore } from '@/stores/auth';
+import { useRouter } from 'vue-router';
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue';
 
 export default {
-  name: 'DefaultLayout',
   components: {
-    LoadingSpinner,
+    X,
     Home,
     Users,
+    FileText,
+    Building2,
+    FileBarChart,
+    MapPin,
     UserCog,
     Shield,
     LogOut,
-    Menu,
-    X,
-    Search,
-    FileText,
-    Building2,
-    MapPin
+    LoadingSpinner,
   },
-  data() {
-    return {
-      sidebarOpen: false
+  setup() {
+    const route = useRoute();
+    const router = useRouter();
+    const authStore = useAuthStore();
+    const pageTitle = computed(() => route.meta.title || 'Dashboard');
+    const sidebarOpen = ref(window.innerWidth >= 1024);
+    const isMobile = ref(window.innerWidth < 1024);
+
+    const handleResize = () => {
+      const width = window.innerWidth;
+      isMobile.value = width < 1024;
+
+      if (width >= 1024) {
+        sidebarOpen.value = true;
+      } else if (!isMobile.value) {
+        sidebarOpen.value = false;
+      }
     };
-  },
-  computed: {
-    authStore() {
-      return useAuthStore();
-    },
-    currentRouteName() {
-      const routeNames = {
-        dashboard: 'Dashboard',
-        empleados: 'Empleados',
-        'empleado-nuevo': 'Nuevo Empleado',
-        'empleado-detalle': 'Detalle de Empleado',
-        usuarios: 'Usuarios',
-        'usuario-nuevo': 'Nuevo Usuario',
-        'usuario-detalle': 'Detalle de Usuario',
-        roles: 'Roles',
-        documentos: 'Documentos',
-        centros: 'Centros',
-        departamentos: 'Departamentos',
-        zonas: 'Zonas',
-        'tipos-contrato': 'Tipos de Contrato',
-        empresas: 'Empresas',
-        convenios: 'Convenios',
-        'categorias-convenio': 'Categorías de Convenio',
-        unauthorized: 'Acceso Denegado',
-        'not-found': 'Página No Encontrada'
-      };
 
-      return routeNames[this.$route.name] || 'Dashboard';
-    },
-    userName() {
-      return this.authStore.user && this.authStore.user.nombre ? this.authStore.user.nombre : '';
-    },
-    userInitials() {
-      if (!this.authStore.user) return '';
+    onMounted(() => {
+      handleResize();
+      window.addEventListener('resize', handleResize);
+    });
 
-      const nombre = this.authStore.user.nombre || '';
-      const apellidos = this.authStore.user.apellidos || '';
+    onUnmounted(() => {
+      window.removeEventListener('resize', handleResize);
+    });
+
+    watch(
+        () => route.path,
+        () => {
+          if (isMobile.value) {
+            sidebarOpen.value = false;
+          }
+        }
+    );
+
+    const toggleSidebar = () => {
+      sidebarOpen.value = !sidebarOpen.value;
+    };
+
+    const openSidebar = () => {
+      sidebarOpen.value = true;
+    };
+
+    const closeSidebar = () => {
+      if (isMobile.value) {
+        sidebarOpen.value = false;
+      }
+    };
+
+    const closeSidebarOnMobile = () => {
+      if (isMobile.value) {
+        sidebarOpen.value = false;
+      }
+    };
+
+    const logout = () => {
+      authStore.logout();
+      router.push('/login');
+    };
+
+    const hasPermission = (permission) => {
+      return authStore.hasPermission(permission);
+    };
+
+    const userName = computed(() => {
+      if (!authStore.user) return '';
+      const nombre = authStore.user.nombre || '';
+      const apellidos = authStore.user.apellidos || '';
+      return `${nombre} ${apellidos}`.trim();
+    });
+
+    const userRole = computed(() => {
+      if (!authStore.user || !authStore.user.Rol) return '';
+      return authStore.user.Rol.nombre || '';
+    });
+
+    const userInitials = computed(() => {
+      if (!authStore.user) return '';
+
+      const nombre = authStore.user.nombre || '';
+      const apellidos = authStore.user.apellidos || '';
 
       if (!nombre && !apellidos) return '';
 
@@ -232,70 +294,110 @@ export default {
       const inicialApellido = apellidos.charAt(0);
 
       return (inicialNombre + inicialApellido).toUpperCase();
-    },
-    userRole() {
-      if (!this.authStore.user || !this.authStore.user.Rol) return '';
+    });
 
-      return this.authStore.user.Rol.nombre || '';
-    }
+    return {
+      pageTitle,
+      userName,
+      userRole,
+      userInitials,
+      sidebarOpen,
+      isMobile,
+      toggleSidebar,
+      openSidebar,
+      closeSidebar,
+      closeSidebarOnMobile,
+      logout,
+      authStore,
+      hasPermission,
+    };
   },
-  methods: {
-    toggleSidebar() {
-      this.sidebarOpen = !this.sidebarOpen;
-    },
-    closeSidebar() {
-      this.sidebarOpen = false;
-    },
-    closeSidebarOnMobile() {
-      if (window.innerWidth < 1024) {
-        this.closeSidebar();
-      }
-    },
-    logout() {
-      this.authStore.logout();
-      this.$router.push('/login');
-    },
-    hasPermission(permission) {
-      if (this.authStore.isAdmin) {
-        return true;
-      }
-
-      if (permission.tipo === 'Escritura') {
-        return this.authStore.hasPermission(permission);
-      } else if (permission.tipo === 'Lectura') {
-        return (
-            this.authStore.hasPermission(permission) ||
-            this.authStore.hasPermission({ ...permission, tipo: 'Escritura' })
-        );
-      }
-
-      return false;
-    }
-  },
-  mounted() {
-    if (this.authStore.isAuthenticated &&
-        (!this.authStore.user?.Rol || !this.authStore.user?.Rol?.Permisos) &&
-        !this.authStore.isLoadingPermissions) {
-      try {
-        this.authStore.loadUserRoleAndPermissions();
-      } catch (error) {
-        this.authStore.permissionsLoaded = true;
-      }
-    }
-  }
 };
 </script>
 
-<style>
+<style scoped>
 .app-layout {
   display: flex;
   min-height: 100vh;
   background-color: #f9fafb;
+  position: relative;
 }
 
+/* Mobile Header */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 40;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.mobile-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  height: 100%;
+}
+
+.mobile-menu-btn {
+  background: none;
+  border: none;
+  color: #4b5563;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu-btn:hover {
+  background: rgba(220, 38, 38, 0.1);
+  color: #dc2626;
+}
+
+.mobile-logo {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.mobile-company-logo {
+  height: 32px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+}
+
+.mobile-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+}
+
+.mobile-avatar-text {
+  font-size: 0.75rem;
+}
+
+/* Sidebar */
 .sidebar {
   width: 260px;
-  background-color: #fff;
+  background: #ffffff;
   border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
@@ -305,6 +407,7 @@ export default {
   bottom: 0;
   z-index: 50;
   transition: transform 0.3s ease;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
 }
 
 .sidebar-header {
@@ -313,32 +416,53 @@ export default {
   justify-content: space-between;
   padding: 1.25rem;
   border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative;
+  height: 80px;
 }
 
-.logo {
+.logo-container {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
-.logo-icon {
-  width: 32px;
-  height: 32px;
+.company-logo {
+  height: auto;
+  width: 85%;
+  max-height: 60px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  transition: transform 0.3s ease;
 }
 
-.logo-text {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #111827;
+.company-logo:hover {
+  transform: scale(1.05);
 }
 
 .sidebar-close {
-  display: none;
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
   background: none;
   border: none;
   color: #6b7280;
   cursor: pointer;
-  padding: 0.25rem;
+  padding: 0.375rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.sidebar-close:hover {
+  transform: rotate(90deg);
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
 }
 
 .user-profile {
@@ -347,19 +471,55 @@ export default {
   align-items: center;
   gap: 0.75rem;
   border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  position: relative;
+}
+
+.user-profile::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.2), transparent);
+}
+
+.user-avatar-container {
+  position: relative;
 }
 
 .user-avatar {
   width: 40px;
   height: 40px;
-  border-radius: 9999px;
-  background-color: #dc2626;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 0.875rem;
+  box-shadow: 0 3px 6px rgba(220, 38, 38, 0.2);
+  border: 2px solid white;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.25);
+}
+
+.avatar-status {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .user-info {
@@ -368,7 +528,7 @@ export default {
 }
 
 .user-name {
-  margin: 0;
+  margin: 0 0 2px 0;
   font-size: 0.875rem;
   font-weight: 600;
   color: #111827;
@@ -378,15 +538,44 @@ export default {
 }
 
 .user-role {
-  margin: 0;
+  margin: 0 0 4px 0;
   font-size: 0.75rem;
   color: #6b7280;
+  font-weight: 500;
+}
+
+.user-status {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-text {
+  font-size: 0.625rem;
+  color: #10b981;
+  font-weight: 500;
 }
 
 .sidebar-nav {
   flex: 1;
   padding: 1.25rem 0;
   overflow-y: auto;
+  /* Ocultar scrollbar */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+/* Ocultar scrollbar en WebKit browsers (Chrome, Safari, Edge) */
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-section {
@@ -402,6 +591,20 @@ export default {
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.nav-section-title::before {
+  content: '';
+  position: absolute;
+  left: 1.25rem;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: #dc2626;
+  transform: translateY(-50%);
 }
 
 .nav-item {
@@ -411,18 +614,24 @@ export default {
   color: #4b5563;
   text-decoration: none;
   position: relative;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0.375rem;
+  margin: 0 0.5rem;
+  touch-action: manipulation;
 }
 
 .nav-item:hover {
   background-color: #f3f4f6;
   color: #111827;
+  transform: translateX(3px);
 }
 
 .nav-item.router-link-active {
-  background-color: #f3f4f6;
+  background-color: rgba(220, 38, 38, 0.1);
   color: #dc2626;
   font-weight: 500;
+  position: relative;
+  overflow: hidden;
 }
 
 .nav-item.router-link-active::before {
@@ -433,11 +642,28 @@ export default {
   height: 100%;
   width: 3px;
   background-color: #dc2626;
+  box-shadow: 0 0 8px rgba(220, 38, 38, 0.5);
+}
+
+.nav-item.router-link-active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at left center, rgba(220, 38, 38, 0.15), transparent 70%);
+  pointer-events: none;
 }
 
 .nav-icon {
   margin-right: 0.75rem;
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.nav-item:hover .nav-icon {
+  transform: scale(1.1);
 }
 
 .sidebar-footer {
@@ -457,11 +683,33 @@ export default {
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  touch-action: manipulation;
 }
 
 .logout-button:hover {
-  background-color: #e5e7eb;
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.logout-button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(220, 38, 38, 0.3);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+.logout-button:hover::after {
+  animation: ripple 1s ease-out;
 }
 
 .logout-icon {
@@ -477,78 +725,8 @@ export default {
   transition: margin-left 0.3s ease;
 }
 
-.main-header {
-  height: 64px;
-  background-color: #fff;
-  border-bottom: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.5rem;
-  position: sticky;
-  top: 0;
-  z-index: 40;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-}
-
-.menu-toggle {
-  display: none;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  margin-right: 1rem;
-  padding: 0.25rem;
-}
-
-.breadcrumb {
-  display: flex;
-  align-items: center;
-}
-
-.breadcrumb-item {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.search-container {
-  position: relative;
-  width: 240px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  background-color: #f9fafb;
-  transition: all 0.2s ease;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #dc2626;
-  background-color: #fff;
+.main-pushed {
+  margin-left: 0;
 }
 
 .main-content {
@@ -558,7 +736,7 @@ export default {
 }
 
 .sidebar-overlay {
-  display: none;
+  display: block;
   position: fixed;
   top: 0;
   left: 0;
@@ -566,12 +744,69 @@ export default {
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 45;
+  backdrop-filter: blur(2px);
 }
 
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(20, 20);
+    opacity: 0;
+  }
+}
+
+/* Large Desktop (1440px+) */
+@media (min-width: 1440px) {
+  .sidebar {
+    width: 280px;
+  }
+
+  .main-wrapper {
+    margin-left: 280px;
+  }
+
+  .main-content {
+    padding: 2rem;
+  }
+
+  .company-logo {
+    max-height: 70px;
+  }
+}
+
+/* Desktop (1024px - 1439px) */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .sidebar {
+    width: 260px;
+  }
+
+  .main-wrapper {
+    margin-left: 260px;
+  }
+}
+
+/* Tablet and Mobile (< 1024px) */
 @media (max-width: 1023px) {
+  .mobile-header {
+    display: block;
+  }
+
   .sidebar {
     transform: translateX(-100%);
     width: 280px;
+    z-index: 60;
   }
 
   .sidebar-open {
@@ -584,30 +819,319 @@ export default {
 
   .main-wrapper {
     margin-left: 0;
+    padding-top: 60px;
   }
 
-  .menu-toggle {
-    display: block;
+  .main-content {
+    padding: 1.25rem;
   }
 
-  .sidebar-overlay {
-    display: block;
+  .nav-item {
+    padding: 0.75rem 1.25rem;
+    margin: 0.125rem 0.5rem;
+  }
+
+  .nav-icon {
+    margin-right: 1rem;
   }
 }
 
+/* Mobile Landscape (480px - 767px) */
 @media (max-width: 767px) {
-  .search-container {
-    display: none;
+  .mobile-header {
+    height: 56px;
   }
 
-  .main-header {
-    padding: 0 1rem;
+  .main-wrapper {
+    padding-top: 56px;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+
+  .sidebar {
+    width: 85%;
+    max-width: 320px;
+  }
+
+  .sidebar-header {
+    height: 70px;
+    padding: 1rem;
+  }
+
+  .company-logo {
+    max-height: 50px;
+  }
+
+  .user-profile {
+    padding: 1rem;
+  }
+
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+  }
+
+  .user-name {
+    font-size: 0.8rem;
+  }
+
+  .user-role {
+    font-size: 0.7rem;
+  }
+
+  .nav-item {
+    padding: 0.75rem 1rem;
+    margin: 0.125rem 0.375rem;
+  }
+
+  .nav-section-title {
+    padding-left: 1.25rem;
+    font-size: 0.7rem;
+  }
+
+  .logout-button {
+    padding: 0.75rem;
+    font-size: 0.8rem;
   }
 }
 
-@media (max-width: 639px) {
-  .breadcrumb {
-    display: none;
+/* Mobile Portrait (320px - 479px) */
+@media (max-width: 479px) {
+  .mobile-header {
+    height: 52px;
+  }
+
+  .mobile-header-content {
+    padding: 0 0.5rem;
+  }
+
+  .mobile-company-logo {
+    height: 28px;
+    max-width: 100px;
+  }
+
+  .mobile-user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.7rem;
+  }
+
+  .main-wrapper {
+    padding-top: 52px;
+  }
+
+  .main-content {
+    padding: 0.75rem;
+  }
+
+  .sidebar {
+    width: 85%;
+  }
+
+  .sidebar-header {
+    height: 60px;
+    padding: 0.75rem;
+  }
+
+  .company-logo {
+    max-height: 40px;
+    width: 90%;
+  }
+
+  .user-profile {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
+  }
+
+  .avatar-status {
+    width: 8px;
+    height: 8px;
+  }
+
+  .user-name {
+    font-size: 0.75rem;
+  }
+
+  .user-role {
+    font-size: 0.65rem;
+  }
+
+  .status-text {
+    font-size: 0.6rem;
+  }
+
+  .sidebar-nav {
+    padding: 1rem 0;
+  }
+
+  .nav-item {
+    padding: 0.625rem 0.75rem;
+    margin: 0.125rem 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .nav-icon {
+    margin-right: 0.625rem;
+  }
+
+  .nav-section {
+    margin-bottom: 1.25rem;
+  }
+
+  .nav-section-title {
+    padding: 0 0.75rem;
+    padding-left: 1rem;
+    font-size: 0.65rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .sidebar-footer {
+    padding: 0.75rem;
+  }
+
+  .logout-button {
+    padding: 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  .logout-icon {
+    margin-right: 0.5rem;
+  }
+}
+
+/* Extra Small Mobile (< 320px) */
+@media (max-width: 319px) {
+  .mobile-header {
+    height: 48px;
+  }
+
+  .mobile-company-logo {
+    height: 24px;
+    max-width: 80px;
+  }
+
+  .mobile-user-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 0.65rem;
+  }
+
+  .main-wrapper {
+    padding-top: 48px;
+  }
+
+  .main-content {
+    padding: 0.5rem;
+  }
+
+  .sidebar-header {
+    height: 56px;
+    padding: 0.5rem;
+  }
+
+  .company-logo {
+    max-height: 36px;
+  }
+
+  .user-profile {
+    padding: 0.5rem;
+  }
+
+  .nav-item {
+    padding: 0.5rem;
+    margin: 0.125rem;
+    font-size: 0.8rem;
+  }
+
+  .nav-section-title {
+    font-size: 0.6rem;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .nav-item:hover {
+    transform: none;
+  }
+
+  .nav-item:active {
+    background-color: #f3f4f6;
+    transform: scale(0.98);
+  }
+
+  .logout-button:hover {
+    background-color: #f3f4f6;
+  }
+
+  .logout-button:active {
+    background-color: #fee2e2;
+    transform: scale(0.98);
+  }
+
+  .mobile-menu-btn:active {
+    background: rgba(220, 38, 38, 0.1);
+    transform: scale(0.95);
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .company-logo,
+  .mobile-company-logo {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 767px) and (orientation: landscape) {
+  .sidebar {
+    width: 280px;
+  }
+
+  .mobile-header {
+    height: 48px;
+  }
+
+  .main-wrapper {
+    padding-top: 48px;
+  }
+
+  .sidebar-header {
+    height: 60px;
+  }
+
+  .user-profile {
+    padding: 0.75rem;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .nav-item,
+  .logout-button,
+  .mobile-menu-btn,
+  .company-logo,
+  .user-avatar {
+    transition: none;
+  }
+
+  .status-dot {
+    animation: none;
+  }
+
+  .logout-button::after {
+    animation: none;
   }
 }
 </style>

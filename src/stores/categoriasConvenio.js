@@ -1,5 +1,6 @@
 import { defineStore } from "pinia"
 import categoriasConvenioApi from "../api/categoriasConvenio.api.js"
+import { useNotificationStore } from "./notification"
 
 export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
     state: () => ({
@@ -21,6 +22,7 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
         async fetchCategorias() {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await categoriasConvenioApi.getAll()
@@ -34,7 +36,9 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
                 }
             } catch (err) {
                 console.error("Error al cargar categorías:", err)
-                this.error = err.message || "Error al cargar categorías"
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar categorías"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 return []
             } finally {
                 this.loading = false
@@ -44,6 +48,7 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
         async fetchCategoriasByConvenio(idConvenio) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await categoriasConvenioApi.getByConvenio(idConvenio)
@@ -61,7 +66,9 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
                 }
             } catch (err) {
                 console.error("Error al cargar categorías por convenio:", err)
-                this.error = err.message || "Error al cargar categorías por convenio"
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar categorías por convenio"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 return []
             } finally {
                 this.loading = false
@@ -72,6 +79,7 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
             this.loading = true
             this.error = null
             this.currentCategoria = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await categoriasConvenioApi.getById(id)
@@ -85,7 +93,9 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
                 }
             } catch (err) {
                 console.error("Error al cargar la categoría:", err)
-                this.error = err.message || "Error al cargar la categoría"
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar la categoría"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 return null
             } finally {
                 this.loading = false
@@ -95,6 +105,7 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
         async createCategoria(categoriaData) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await categoriasConvenioApi.create(categoriaData)
@@ -103,13 +114,16 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
                 if (data.success) {
                     const nuevaCategoria = data.data.categoria
                     this.categorias.push(nuevaCategoria)
+                    notificationStore.success("Categoría creada correctamente")
                     return nuevaCategoria
                 } else {
                     throw new Error(data.message || "Error al crear la categoría")
                 }
             } catch (err) {
                 console.error("Error al crear la categoría:", err)
-                this.error = err.message || "Error al crear la categoría"
+                const errorMsg = err.response?.data?.message || err.message || "Error al crear la categoría"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 throw err
             } finally {
                 this.loading = false
@@ -119,6 +133,7 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
         async updateCategoria(id, categoriaData) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await categoriasConvenioApi.update(id, categoriaData)
@@ -133,13 +148,16 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
                         this.categorias[index] = categoriaActualizada
                     }
 
+                    notificationStore.success("Categoría actualizada correctamente")
                     return categoriaActualizada
                 } else {
                     throw new Error(data.message || "Error al actualizar la categoría")
                 }
             } catch (err) {
                 console.error("Error al actualizar la categoría:", err)
-                this.error = err.message || "Error al actualizar la categoría"
+                const errorMsg = err.response?.data?.message || err.message || "Error al actualizar la categoría"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 throw err
             } finally {
                 this.loading = false
@@ -149,9 +167,9 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
         async deleteCategoria(id) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
-                const categoriaToDelete = this.categorias.find((c) => c.id_categoria === Number(id))
                 const response = await categoriasConvenioApi.delete(id)
                 const data = response.data
 
@@ -162,13 +180,16 @@ export const useCategoriasConvenioStore = defineStore("categoriasConvenio", {
                         this.currentCategoria = null
                     }
 
+                    notificationStore.success("Categoría eliminada correctamente")
                     return true
                 } else {
                     throw new Error(data.message || "Error al eliminar la categoría")
                 }
             } catch (err) {
                 console.error("Error al eliminar la categoría:", err)
-                this.error = err.message || "Error al eliminar la categoría"
+                const errorMsg = err.response?.data?.message || err.message || "Error al eliminar la categoría"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 throw err
             } finally {
                 this.loading = false

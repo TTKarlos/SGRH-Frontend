@@ -5,7 +5,8 @@
           v-for="documento in documentos"
           :key="documento.id_documento"
           :documento="documento"
-          @previsualizar="$emit('previsualizar', documento)"
+          @click="$emit('ver-detalles', documento)"
+          @ver-detalles="$emit('ver-detalles', documento)"
           @descargar="$emit('descargar', documento)"
           @editar="$emit('editar', documento)"
           @eliminar="$emit('eliminar', documento)"
@@ -37,7 +38,7 @@ export default {
     }
   },
 
-  emits: ['previsualizar', 'descargar', 'editar', 'eliminar'],
+  emits: ['ver-detalles', 'descargar', 'editar', 'eliminar'],
 
   setup() {
     return {}

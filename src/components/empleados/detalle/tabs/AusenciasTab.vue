@@ -283,9 +283,7 @@ export default {
     },
 
     deleteAusencia(ausencia) {
-      if (confirm(`¿Está seguro de eliminar esta ausencia?`)) {
         this.$emit('delete-ausencia', ausencia)
-      }
     },
 
     closeModal() {

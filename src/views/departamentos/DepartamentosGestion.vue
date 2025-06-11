@@ -121,12 +121,12 @@
             </button>
           </div>
           <div class="modal-body">
-            <p>¿Está seguro que desea eliminar el departamento <strong>{{ departamentoToDelete?.nombre }}</strong>?</p>
+            <p>¿Está seguro que desea eliminar el departamento <strong>{{ departamentoToDelete?.nombre || 'seleccionado' }}</strong>?</p>
             <p class="text-danger">Esta acción no se puede deshacer.</p>
           </div>
           <div class="modal-footer">
             <button @click="closeDeleteModal" class="btn-secondary">Cancelar</button>
-            <button @click="deleteDepartamento" class="btn-danger" :disabled="deleting">
+            <button @click="handleDeleteDepartamento" class="btn-danger" :disabled="deleting">
               {{ deleting ? 'Eliminando...' : 'Eliminar' }}
             </button>
           </div>
@@ -286,10 +286,6 @@ export default {
         this.closeModal();
         await this.loadDepartamentos();
       } catch (err) {
-        notificationStore.error(
-            err.message || 'Error al guardar el departamento',
-            "Error al guardar"
-        );
       } finally {
         this.saving = false;
       }
@@ -305,7 +301,7 @@ export default {
       this.departamentoToDelete = null;
     },
 
-    async deleteDepartamento() {
+    async handleDeleteDepartamento() {
       const notificationStore = useNotificationStore();
 
       if (!this.departamentoToDelete) return;
@@ -321,10 +317,6 @@ export default {
         this.closeDeleteModal();
         await this.loadDepartamentos();
       } catch (err) {
-        notificationStore.error(
-            err.message || 'Error al eliminar el departamento',
-            "Error al eliminar"
-        );
       } finally {
         this.deleting = false;
       }

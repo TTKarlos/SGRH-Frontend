@@ -296,6 +296,14 @@ export default {
         return;
       }
 
+      if (!this.categoriaForm.descripcion) {
+        notificationStore.error(
+            'La descripcion es obligatorio',
+            'Error de validación'
+        );
+        return;
+      }
+
       this.saving = true;
 
       try {

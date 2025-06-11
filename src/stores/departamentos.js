@@ -1,5 +1,6 @@
 import { defineStore } from "pinia"
 import departamentosApi from "../api/departamentos.api"
+import { useNotificationStore } from "./notification"
 
 export const useDepartamentosStore = defineStore("departamentos", {
     state: () => ({
@@ -13,16 +14,15 @@ export const useDepartamentosStore = defineStore("departamentos", {
         getDepartamentosPorCentro: (state) => (idCentro) => {
             if (!idCentro) return state.departamentos
 
-            return state.departamentos.filter(
-                departamento => departamento.id_centro === idCentro
-            )
-        }
+            return state.departamentos.filter((departamento) => departamento.id_centro === idCentro)
+        },
     },
 
     actions: {
         async fetchDepartamentos() {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await departamentosApi.getAll()
@@ -36,7 +36,9 @@ export const useDepartamentosStore = defineStore("departamentos", {
                 }
             } catch (err) {
                 console.error("Error al cargar departamentos:", err)
-                this.error = err.message || "Error al cargar departamentos"
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar departamentos"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 return []
             } finally {
                 this.loading = false
@@ -46,6 +48,7 @@ export const useDepartamentosStore = defineStore("departamentos", {
         async fetchDepartamentosByCentro(idCentro) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await departamentosApi.getAll({ id_centro: idCentro })
@@ -58,7 +61,9 @@ export const useDepartamentosStore = defineStore("departamentos", {
                 }
             } catch (err) {
                 console.error("Error al cargar departamentos por centro:", err)
-                this.error = err.message || "Error al cargar departamentos por centro"
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar departamentos por centro"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 return []
             } finally {
                 this.loading = false
@@ -69,6 +74,7 @@ export const useDepartamentosStore = defineStore("departamentos", {
             this.loading = true
             this.error = null
             this.currentDepartamento = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await departamentosApi.getById(id)
@@ -82,7 +88,9 @@ export const useDepartamentosStore = defineStore("departamentos", {
                 }
             } catch (err) {
                 console.error("Error al cargar el departamento:", err)
-                this.error = err.message || "Error al cargar el departamento"
+                const errorMsg = err.response?.data?.message || err.message || "Error al cargar el departamento"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
                 return null
             } finally {
                 this.loading = false
@@ -92,21 +100,26 @@ export const useDepartamentosStore = defineStore("departamentos", {
         async createDepartamento(departamentoData) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await departamentosApi.create(departamentoData)
                 const data = response.data
 
                 if (data.success) {
-                    await this.fetchDepartamentos()
-                    return data.data.departamento
+                    const nuevoDepartamento = data.data.departamento
+                    this.departamentos.push(nuevoDepartamento)
+                    notificationStore.success("Departamento creado correctamente")
+                    return nuevoDepartamento
                 } else {
                     throw new Error(data.message || "Error al crear el departamento")
                 }
             } catch (err) {
                 console.error("Error al crear el departamento:", err)
-                this.error = err.message || "Error al crear el departamento"
-                return null
+                const errorMsg = err.response?.data?.message || err.message || "Error al crear el departamento"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
+                throw err
             } finally {
                 this.loading = false
             }
@@ -115,27 +128,32 @@ export const useDepartamentosStore = defineStore("departamentos", {
         async updateDepartamento(id, departamentoData) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await departamentosApi.update(id, departamentoData)
                 const data = response.data
 
                 if (data.success) {
-                    this.currentDepartamento = data.data.departamento
+                    const departamentoActualizado = data.data.departamento
+                    this.currentDepartamento = departamentoActualizado
 
-                    const index = this.departamentos.findIndex(d => d.id_departamento === Number(id))
+                    const index = this.departamentos.findIndex((d) => d.id_departamento === Number(id))
                     if (index !== -1) {
-                        this.departamentos[index] = data.data.departamento
+                        this.departamentos[index] = departamentoActualizado
                     }
 
-                    return this.currentDepartamento
+                    notificationStore.success("Departamento actualizado correctamente")
+                    return departamentoActualizado
                 } else {
                     throw new Error(data.message || "Error al actualizar el departamento")
                 }
             } catch (err) {
                 console.error("Error al actualizar el departamento:", err)
-                this.error = err.message || "Error al actualizar el departamento"
-                return null
+                const errorMsg = err.response?.data?.message || err.message || "Error al actualizar el departamento"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
+                throw err
             } finally {
                 this.loading = false
             }
@@ -144,31 +162,33 @@ export const useDepartamentosStore = defineStore("departamentos", {
         async deleteDepartamento(id) {
             this.loading = true
             this.error = null
+            const notificationStore = useNotificationStore()
 
             try {
                 const response = await departamentosApi.delete(id)
                 const data = response.data
 
                 if (data.success) {
-                    this.departamentos = this.departamentos.filter(
-                        d => d.id_departamento !== Number(id)
-                    )
+                    this.departamentos = this.departamentos.filter((d) => d.id_departamento !== Number(id))
 
                     if (this.currentDepartamento && this.currentDepartamento.id_departamento === Number(id)) {
                         this.currentDepartamento = null
                     }
 
+                    notificationStore.success("Departamento eliminado correctamente")
                     return true
                 } else {
                     throw new Error(data.message || "Error al eliminar el departamento")
                 }
             } catch (err) {
                 console.error("Error al eliminar el departamento:", err)
-                this.error = err.message || "Error al eliminar el departamento"
-                return false
+                const errorMsg = err.response?.data?.message || err.message || "Error al eliminar el departamento"
+                this.error = errorMsg
+                notificationStore.error(errorMsg)
+                throw err
             } finally {
                 this.loading = false
             }
-        }
-    }
+        },
+    },
 })

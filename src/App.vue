@@ -9,16 +9,6 @@
 
     <Notification />
 
-    <!-- Botón para mostrar/ocultar el depurador de permisos -->
-    <button
-        v-if="isDevelopment"
-        @click="toggleDebugger"
-        class="debug-toggle-button"
-        :class="{ 'active': showDebugger }"
-    >
-      <span v-if="showDebugger">Ocultar Depurador</span>
-      <span v-else>Mostrar Depurador</span>
-    </button>
 
     <!-- Depurador de permisos -->
     <PermissionDebugger v-if="isDevelopment && showDebugger" />

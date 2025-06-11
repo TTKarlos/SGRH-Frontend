@@ -19,6 +19,7 @@ import ConveniosView from "../views/convenios/ConveniosView.vue"
 import CategoriasConveniosView from "../views/convenios/CategoriasConveniosView.vue"
 import Unauthorized from "../views/errors/Unauthorized.vue"
 import NotFound from "../views/errors/NotFound.vue"
+import Informes from '../views/informes/Informes.vue'
 
 const routes = [
     {
@@ -180,6 +181,15 @@ const routes = [
             title: "Categorías de Convenio",
             requiredPermission: { nombre: "Master", tipo: "Escritura" },
         },
+    },
+    {
+        path: '/informes',
+        name: 'informes',
+        component: Informes,
+        meta: {
+            requiresAuth: true,
+            permission: { nombre: 'Informes', tipo: 'Lectura' }
+        }
     },
     {
         path: "/unauthorized",

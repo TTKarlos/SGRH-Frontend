@@ -1,53 +1,43 @@
 <template>
-  <div class="header-container">
+  <div class="page-header">
     <div class="header-title">
       <h1>Convenios Colectivos</h1>
-      <p class="header-description">Gestión de convenios colectivos y sus categorías profesionales</p>
+      <p class="text-muted">Gestión de convenios colectivos y sus categorías profesionales</p>
     </div>
-
-    <div class="header-actions">
-      <button
-          v-if="canCreate"
-          @click="$emit('nuevo-convenio')"
-          class="btn-primary"
-      >
-        <Plus size="18" class="btn-icon" />
-        <span>Nuevo Convenio</span>
+    <permission-check :permiso="{ nombre: 'Master', tipo: 'Escritura' }">
+      <button class="btn btn-primary" @click="$emit('nuevo-convenio')">
+        <Plus size="16" class="btn-icon" />
+        Nuevo Convenio
       </button>
-    </div>
+    </permission-check>
   </div>
 </template>
 
 <script>
 import { Plus } from 'lucide-vue-next';
-import { usePermission } from '../../composables/usePermission';
+import PermissionCheck from '../common/PermissionCheck.vue';
 
 export default {
   name: 'ConveniosHeader',
-
   components: {
+    PermissionCheck,
     Plus
   },
-
-  emits: ['nuevo-convenio'],
-
-  computed: {
-    canCreate() {
-      const { canWrite } = usePermission();
-      return canWrite('Convenios') || canWrite('Master');
-    }
-  }
-};
+  emits: ['nuevo-convenio']
+}
 </script>
 
 <style scoped>
-.header-container {
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
+  font-family: 'Poppins', sans-serif;
 }
 
 .header-title {
@@ -56,36 +46,47 @@ export default {
 }
 
 .header-title h1 {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #111827;
+  font-size: 1.75rem;
+  font-weight: 600;
   margin: 0;
-  line-height: 1.2;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
 }
 
-.header-description {
+.header-title h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
+}
+
+.text-muted {
   color: #6b7280;
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
   font-size: 0.95rem;
 }
 
-.header-actions {
-  display: flex;
-  gap: 0.75rem;
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
 }
 
 .btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
   background-color: #dc2626;
   color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
   box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
@@ -96,22 +97,17 @@ export default {
 }
 
 .btn-icon {
-  flex-shrink: 0;
+  margin-right: 0.5rem;
 }
 
-@media (max-width: 640px) {
-  .header-container {
+@media (max-width: 767px) {
+  .page-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .header-actions {
+  .page-header .btn {
     width: 100%;
-  }
-
-  .btn-primary {
-    width: 100%;
-    justify-content: center;
   }
 }
 </style>

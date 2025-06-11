@@ -14,56 +14,17 @@
             </div>
           </div>
           <div class="action-buttons">
-            <button @click="openModal" class="btn btn-primary" :disabled="loading">
-              <PlusIcon size="18" class="btn-icon" />
-              Nuevo Contrato
-            </button>
-            <button @click="refreshData" class="btn btn-outline" :disabled="loading">
-              <RefreshCwIcon size="18" class="btn-icon" />
-            </button>
+            <permission-check :permiso="{ nombre: 'Contratos', tipo: 'Escritura' }">
+              <button @click="openModal" class="btn btn-primary" :disabled="loading">
+                <PlusIcon size="18" class="btn-icon" />
+                Nuevo Contrato
+              </button>
+            </permission-check>
           </div>
         </div>
       </div>
 
       <div class="card-body">
-        <!-- Filtros -->
-        <div class="filters-container">
-          <div class="filters-grid">
-            <div class="form-group">
-              <label>Tipo de Contrato</label>
-              <select v-model="filtros.id_tipo_contrato" class="form-control">
-                <option :value="null">Todos</option>
-                <option v-for="tipo in tiposContrato" :key="tipo.id_tipo_contrato" :value="tipo.id_tipo_contrato">
-                  {{ tipo.nombre }}
-                </option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Empresa</label>
-              <select v-model="filtros.id_empresa" class="form-control">
-                <option :value="null">Todas</option>
-                <option v-for="empresa in empresas" :key="empresa.id_empresa" :value="empresa.id_empresa">
-                  {{ empresa.nombre }}
-                </option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Estado</label>
-              <select v-model="filtros.vigentes" class="form-control">
-                <option :value="null">Todos</option>
-                <option :value="true">Vigentes</option>
-                <option :value="false">Finalizados</option>
-              </select>
-            </div>
-          </div>
-          <div class="filters-actions">
-            <button @click="aplicarFiltros" class="btn btn-primary" :disabled="loading">
-              <SearchIcon size="16" class="btn-icon" />
-              Filtrar
-            </button>
-          </div>
-        </div>
-
         <!-- Estado de carga -->
         <div v-if="loading" class="loading-container">
           <Loader size="32" class="animate-spin" />
@@ -71,14 +32,10 @@
         </div>
 
         <!-- Estado vacío -->
-        <div v-else-if="contratos.length === 0" class="empty-state">
+        <div v-else-if="!contratos || contratos.length === 0" class="empty-state">
           <FileTextIcon size="48" class="empty-icon" />
           <h3>Sin contratos registrados</h3>
           <p>Este empleado no tiene contratos registrados.</p>
-          <button @click="openModal" class="btn btn-primary">
-            <PlusIcon size="18" class="btn-icon" />
-            Crear Contrato
-          </button>
         </div>
 
         <!-- Lista de contratos -->
@@ -98,9 +55,11 @@
                 <button @click="viewContrato(contrato)" class="btn-icon-only" title="Ver detalles">
                   <EyeIcon size="16" />
                 </button>
-                <button @click="editContrato(contrato)" class="btn-icon-only" title="Editar">
-                  <EditIcon size="16" />
-                </button>
+                <permission-check :permiso="{ nombre: 'Contratos', tipo: 'Escritura' }">
+                  <button @click="editContrato(contrato)" class="btn-icon-only" title="Editar">
+                    <EditIcon size="16" />
+                  </button>
+                </permission-check>
                 <button
                     v-if="contrato.ruta_archivo"
                     @click="downloadDocumento(contrato.id_contrato)"
@@ -109,9 +68,11 @@
                 >
                   <DownloadIcon size="16" />
                 </button>
-                <button @click="confirmDelete(contrato)" class="btn-icon-only" title="Eliminar">
-                  <Trash2Icon size="16" />
-                </button>
+                <permission-check :permiso="{ nombre: 'Contratos', tipo: 'Escritura' }">
+                  <button @click="confirmDelete(contrato)" class="btn-icon-only btn-danger" title="Eliminar">
+                    <Trash2Icon size="16" />
+                  </button>
+                </permission-check>
               </div>
             </div>
 
@@ -315,10 +276,12 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button @click="editContrato(contratoSeleccionado)" class="btn btn-primary">
-            <EditIcon size="18" class="btn-icon" />
-            Editar
-          </button>
+          <permission-check :permiso="{ nombre: 'Contratos', tipo: 'Escritura' }">
+            <button @click="editContrato(contratoSeleccionado)" class="btn btn-primary">
+              <EditIcon size="18" class="btn-icon" />
+              Editar
+            </button>
+          </permission-check>
           <button @click="closeViewerModal" class="btn btn-secondary">
             Cerrar
           </button>
@@ -331,8 +294,6 @@
 <script>
 import {
   PlusIcon,
-  RefreshCwIcon,
-  SearchIcon,
   EyeIcon,
   EditIcon,
   DownloadIcon,
@@ -355,15 +316,15 @@ import { useEmpresasStore } from '../../../../stores/empresas';
 import { useConveniosStore } from '../../../../stores/convenios';
 import { useCategoriasConvenioStore } from '../../../../stores/categoriasConvenio';
 import { storeToRefs } from 'pinia';
+import PermissionCheck from "../../../common/PermissionCheck.vue";
 
 export default {
   name: 'ContratosTab',
 
   components: {
+    PermissionCheck,
     ContratoModal,
     PlusIcon,
-    RefreshCwIcon,
-    SearchIcon,
     EyeIcon,
     EditIcon,
     DownloadIcon,
@@ -425,12 +386,6 @@ export default {
       contratoSeleccionado: null,
       loadingAction: false,
       validationErrors: {},
-      filtros: {
-        id_tipo_contrato: null,
-        id_empresa: null,
-        vigentes: null,
-        page: 1
-      },
       tiposContrato: [],
       empresas: [],
       convenios: [],
@@ -448,27 +403,27 @@ export default {
   },
 
   mounted() {
-    if (this.contratos && this.contratos.length > 0) {
-      this.cargarEntidadesFaltantes();
-      this.calcularEstadisticas();
-    }
+    this.initializeData();
   },
 
   watch: {
     contratos: {
-      handler(newContratos) {
-        if (newContratos && newContratos.length > 0) {
-          this.cargarEntidadesFaltantes();
-          this.calcularEstadisticas();
-        }
+      handler() {
+        this.calcularEstadisticas();
       },
-      deep: true
+      deep: true,
+      immediate: true
     }
   },
 
   methods: {
+    async initializeData() {
+      await this.cargarEntidadesFaltantes();
+      this.calcularEstadisticas();
+    },
+
     calcularEstadisticas() {
-      if (!this.contratos || this.contratos.length === 0) {
+      if (!this.contratos?.length) {
         this.estadisticas = null;
         return;
       }
@@ -485,20 +440,20 @@ export default {
       };
     },
 
-    refreshData() {
-      this.$emit('refresh');
-    },
-
     openModal() {
+      console.log('Opening modal for new contract');
       this.contratoSeleccionado = null;
       this.validationErrors = {};
+      this.selectedConvenioId = null;
       this.showModal = true;
     },
 
     closeModal() {
+      console.log('Closing modal');
       this.showModal = false;
       this.contratoSeleccionado = null;
       this.validationErrors = {};
+      this.selectedConvenioId = null;
     },
 
     viewContrato(contrato) {
@@ -512,6 +467,7 @@ export default {
     },
 
     editContrato(contrato) {
+      console.log('Editing contract:', contrato);
       this.contratoSeleccionado = { ...contrato };
       this.selectedConvenioId = contrato.id_convenio;
       this.validationErrors = {};
@@ -528,6 +484,7 @@ export default {
     },
 
     handleValidationError({ type, message }) {
+      console.log('Validation error:', type, message);
       this.validationErrors = {
         ...this.validationErrors,
         [type]: message
@@ -535,6 +492,7 @@ export default {
     },
 
     handleConvenioChange(convenioId) {
+      console.log('Convenio changed:', convenioId);
       this.selectedConvenioId = convenioId;
       if (convenioId) {
         this.loadCategoriasForConvenio(convenioId);
@@ -542,51 +500,79 @@ export default {
     },
 
     async loadCategoriasForConvenio(convenioId) {
-      if (!convenioId) return;
+      if (!convenioId || this.categorias[convenioId]) return;
 
       try {
-        if (!this.categorias[convenioId]) {
-          const categoriasData = await this.categoriasConvenioStore.fetchCategoriasByConvenio(convenioId);
-          this.categorias = {
-            ...this.categorias,
-            [convenioId]: categoriasData
-          };
-        }
+        const categoriasData = await this.categoriasConvenioStore.fetchCategoriasByConvenio(convenioId);
+        this.categorias = {
+          ...this.categorias,
+          [convenioId]: categoriasData
+        };
       } catch (error) {
-        console.error('Error al cargar categorías del convenio:', error);
+        console.error('Error loading categories:', error);
       }
     },
 
     async saveContrato(contratoData) {
+      console.log('saveContrato called with:', contratoData);
+
       this.loadingAction = true;
       this.validationErrors = {};
 
       try {
-        if (this.contratoSeleccionado && this.contratoSeleccionado.id_contrato) {
-          await this.contratosStore.updateContrato(
+        if (!contratoData.get('id_empleado')) {
+          console.error('Missing id_empleado in form data');
+          throw new Error('El ID del empleado es requerido');
+        }
+
+        console.log('ID Empleado:', contratoData.get('id_empleado'));
+        console.log('Is editing:', !!this.contratoSeleccionado?.id_contrato);
+
+        let result;
+        if (this.contratoSeleccionado?.id_contrato) {
+          console.log('Updating contract:', this.contratoSeleccionado.id_contrato);
+          result = await this.contratosStore.updateContrato(
               this.contratoSeleccionado.id_contrato,
               contratoData
           );
         } else {
-          await this.contratosStore.createContrato(contratoData);
+          console.log('Creating new contract');
+          result = await this.contratosStore.createContrato(contratoData);
         }
-        this.closeModal();
-        this.refreshData();
-      } catch (error) {
-        console.error('Error al guardar contrato:', error);
 
-        if (error.response && error.response.data && error.response.data.message) {
-          this.validationErrors = {
-            general: error.response.data.message
-          };
-        } else {
-          this.validationErrors = {
-            general: 'Error al guardar el contrato. Por favor, inténtelo de nuevo.'
-          };
+        console.log('Contract operation result:', result);
+
+        if (result) {
+          this.closeModal();
+          this.$emit('refresh');
+          console.log('Contract saved successfully');
         }
+      } catch (error) {
+        console.error('Error saving contract:', error);
+        this.handleSaveError(error);
       } finally {
         this.loadingAction = false;
       }
+    },
+
+    handleSaveError(error) {
+      console.log('Handling save error:', error);
+
+      if (error.response?.data?.data?.errors) {
+        const serverErrors = {};
+        error.response.data.data.errors.forEach(err => {
+          serverErrors[err.field] = err.message;
+        });
+        this.validationErrors = serverErrors;
+      } else if (error.response?.data?.errors) {
+        this.validationErrors = error.response.data.errors;
+      } else {
+        this.validationErrors = {
+          general: error.response?.data?.message || error.message || 'Error al guardar el contrato'
+        };
+      }
+
+      console.log('Validation errors set:', this.validationErrors);
     },
 
     confirmDelete(contrato) {
@@ -602,9 +588,9 @@ export default {
         await this.contratosStore.deleteContrato(this.contratoSeleccionado.id_contrato);
         this.showConfirmDialog = false;
         this.contratoSeleccionado = null;
-        this.refreshData();
+        this.$emit('refresh');
       } catch (error) {
-        console.error('Error al eliminar contrato:', error);
+        console.error('Error deleting contract:', error);
       } finally {
         this.loadingAction = false;
       }
@@ -614,7 +600,7 @@ export default {
       try {
         await this.contratosStore.downloadContrato(id);
       } catch (error) {
-        console.error('Error al descargar documento:', error);
+        console.error('Error downloading document:', error);
       }
     },
 
@@ -622,7 +608,7 @@ export default {
       try {
         await this.contratosStore.previewContrato(id);
       } catch (error) {
-        console.error('Error al previsualizar documento:', error);
+        console.error('Error previewing document:', error);
       }
     },
 
@@ -630,27 +616,15 @@ export default {
       return contrato.fecha_fin === null || new Date(contrato.fecha_fin) >= new Date();
     },
 
-    aplicarFiltros() {
-      this.filtros.page = 1;
-      this.refreshData();
-    },
-
-    cambiarPagina(page) {
-      this.filtros.page = page;
-      this.refreshData();
-    },
-
     formatDate(dateString) {
       if (!dateString) return 'N/A';
       try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', {
+        return new Date(dateString).toLocaleDateString('es-ES', {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric'
         });
-      } catch (error) {
-        console.error('Error al formatear fecha:', error);
+      } catch {
         return dateString;
       }
     },
@@ -672,32 +646,61 @@ export default {
 
     async cargarEntidadesFaltantes() {
       try {
-        if (this.tiposContrato.length === 0) {
-          this.tiposContrato = await this.tiposContratoStore.fetchTiposContrato();
+        const promises = [];
+
+        if (!this.tiposContrato.length) {
+          promises.push(
+              this.tiposContratoStore.fetchTiposContrato()
+                  .then(data => {
+                    this.tiposContrato = data || [];
+                    console.log('Tipos contrato loaded:', this.tiposContrato.length);
+                  })
+          );
         }
 
-        if (this.empresas.length === 0) {
-          this.empresas = await this.empresasStore.fetchEmpresas();
+        if (!this.empresas.length) {
+          promises.push(
+              this.empresasStore.fetchEmpresas()
+                  .then(data => {
+                    this.empresas = data || [];
+                    console.log('Empresas loaded:', this.empresas.length);
+                  })
+          );
         }
 
-        if (this.convenios.length === 0) {
-          this.convenios = await this.conveniosStore.fetchConvenios();
+        if (!this.convenios.length) {
+          promises.push(
+              this.conveniosStore.fetchConvenios()
+                  .then(data => {
+                    this.convenios = data || [];
+                    console.log('Convenios loaded:', this.convenios.length);
+                  })
+          );
         }
 
-        const conveniosUsados = new Set();
-        this.contratos.forEach(contrato => {
-          if (contrato.id_convenio) {
-            conveniosUsados.add(contrato.id_convenio);
-          }
-        });
+        await Promise.all(promises);
+
+        const conveniosUsados = [...new Set(
+            this.contratos
+                .filter(c => c.id_convenio)
+                .map(c => c.id_convenio)
+        )];
 
         for (const idConvenio of conveniosUsados) {
           if (!this.categorias[idConvenio]) {
             await this.loadCategoriasForConvenio(idConvenio);
           }
         }
+
+        console.log('All entities loaded successfully');
       } catch (error) {
-        console.error('Error al cargar entidades relacionadas:', error);
+        console.error('Error loading entities:', error);
+      }
+    },
+
+    cambiarPagina(page) {
+      if (page >= 1 && page <= this.paginationInfo.totalPages) {
+        this.$emit('refresh', { page });
       }
     }
   }
@@ -705,6 +708,7 @@ export default {
 </script>
 
 <style scoped>
+/* Estilos base */
 .tab-panel {
   display: flex;
   flex-direction: column;
@@ -760,54 +764,7 @@ export default {
   padding: 1.5rem;
 }
 
-.filters-container {
-  background-color: #f9fafb;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid #e5e7eb;
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-.filters-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-group label {
-  font-weight: 500;
-  color: #4b5563;
-  font-size: 0.875rem;
-}
-
-.form-control {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.375rem;
-  background-color: white;
-  color: #111827;
-  transition: all 0.2s ease;
-  font-size: 0.875rem;
-}
-
-.form-control:focus {
-  outline: none;
-  border-color: #fca5a5;
-  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
-}
-
+/* Estados de carga y vacío */
 .loading-container,
 .empty-state {
   display: flex;
@@ -836,6 +793,7 @@ export default {
   margin-bottom: 1.5rem;
 }
 
+/* Lista de contratos */
 .contratos-list {
   display: flex;
   flex-direction: column;
@@ -893,11 +851,6 @@ export default {
   color: #4b5563;
 }
 
-.badge-info {
-  background-color: #e0f2fe;
-  color: #0369a1;
-}
-
 .contrato-actions {
   display: flex;
   gap: 0.5rem;
@@ -920,6 +873,7 @@ export default {
   border-radius: 0.25rem;
 }
 
+/* Paginación */
 .pagination {
   display: flex;
   justify-content: space-between;
@@ -937,6 +891,7 @@ export default {
   gap: 0.5rem;
 }
 
+/* Botones */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -981,16 +936,6 @@ export default {
   background-color: #e5e7eb;
 }
 
-.btn-outline {
-  background-color: white;
-  color: #4b5563;
-  border: 1px solid #e5e7eb;
-}
-
-.btn-outline:hover:not(:disabled) {
-  background-color: #f9fafb;
-}
-
 .btn-danger {
   background-color: #ef4444;
   color: white;
@@ -1026,6 +971,11 @@ export default {
   color: #dc2626;
 }
 
+.btn-icon-only.btn-danger:hover:not(:disabled) {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
 .btn-icon-only:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -1049,6 +999,7 @@ export default {
   color: #dc2626;
 }
 
+/* Modales */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1120,6 +1071,7 @@ export default {
   margin-top: 0.5rem;
 }
 
+/* Detalles del contrato */
 .detail-content {
   display: flex;
   flex-direction: column;
@@ -1218,6 +1170,7 @@ export default {
   flex-shrink: 0;
 }
 
+/* Animaciones */
 .animate-spin {
   animation: spin 1s linear infinite;
 }
@@ -1242,6 +1195,7 @@ export default {
   }
 }
 
+/* Responsive */
 @media (max-width: 768px) {
   .card-header-content {
     flex-direction: column;
@@ -1271,6 +1225,15 @@ export default {
     margin-top: 0.5rem;
     width: 100%;
     justify-content: flex-end;
+  }
+
+  .contrato-header {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .contrato-actions {
+    align-self: flex-end;
   }
 }
 </style>

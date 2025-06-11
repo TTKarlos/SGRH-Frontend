@@ -97,8 +97,6 @@ export default {
         8: 'Documentos Escritura',
         9: 'Ausencias Lectura',
         10: 'Ausencias Escritura',
-        11: 'Notificaciones Lectura',
-        12: 'Notificaciones Escritura'
       },
       currentUserRole: null
     };

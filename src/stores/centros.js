@@ -1,6 +1,7 @@
 import { defineStore } from "pinia"
 import centrosApi from "../api/centros.api"
 import { useNotificationStore } from "./notification"
+import { validateCentro } from "../validation/centroSchema"
 import api from "../api/axios"
 
 export const useCentrosStore = defineStore("centros", {
@@ -104,14 +105,21 @@ export const useCentrosStore = defineStore("centros", {
             const notificationStore = useNotificationStore()
 
             try {
+                const validation = await validateCentro(centroData, false)
+                if (!validation.isValid) {
+                    const errorMessages = Object.values(validation.errors).join(", ")
+                    throw new Error(errorMessages)
+                }
+
                 const response = await centrosApi.create(centroData)
                 const data = response.data
 
                 if (data.success) {
-                    await this.fetchCentros()
+                    const nuevoCentro = data.data.centro
+                    this.centros.push(nuevoCentro)
                     this.totalCentros++
                     notificationStore.success("Centro creado correctamente")
-                    return data.data.centro
+                    return nuevoCentro
                 } else {
                     throw new Error(data.message || "Error al crear el centro")
                 }
@@ -120,7 +128,7 @@ export const useCentrosStore = defineStore("centros", {
                 const errorMsg = err.response?.data?.message || err.message || "Error al crear el centro"
                 this.error = errorMsg
                 notificationStore.error(errorMsg)
-                return null
+                throw err
             } finally {
                 this.loading = false
             }
@@ -132,19 +140,26 @@ export const useCentrosStore = defineStore("centros", {
             const notificationStore = useNotificationStore()
 
             try {
+                const validation = await validateCentro(centroData, true)
+                if (!validation.isValid) {
+                    const errorMessages = Object.values(validation.errors).join(", ")
+                    throw new Error(errorMessages)
+                }
+
                 const response = await centrosApi.update(id, centroData)
                 const data = response.data
 
                 if (data.success) {
-                    this.currentCentro = data.data.centro
+                    const centroActualizado = data.data.centro
+                    this.currentCentro = centroActualizado
 
                     const index = this.centros.findIndex((c) => c.id_centro === Number(id))
                     if (index !== -1) {
-                        this.centros[index] = data.data.centro
+                        this.centros[index] = centroActualizado
                     }
 
                     notificationStore.success("Centro actualizado correctamente")
-                    return this.currentCentro
+                    return centroActualizado
                 } else {
                     throw new Error(data.message || "Error al actualizar el centro")
                 }
@@ -153,7 +168,7 @@ export const useCentrosStore = defineStore("centros", {
                 const errorMsg = err.response?.data?.message || err.message || "Error al actualizar el centro"
                 this.error = errorMsg
                 notificationStore.error(errorMsg)
-                return null
+                throw err
             } finally {
                 this.loading = false
             }
@@ -186,7 +201,7 @@ export const useCentrosStore = defineStore("centros", {
                 const errorMsg = err.response?.data?.message || err.message || "Error al eliminar el centro"
                 this.error = errorMsg
                 notificationStore.error(errorMsg)
-                return false
+                throw err
             } finally {
                 this.loading = false
             }

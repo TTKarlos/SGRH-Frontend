@@ -19,5 +19,6 @@ export default {
 
     delete(id) {
         return api.delete(`/departamentos/${id}`)
-    }
+    },
+
 }

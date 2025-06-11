@@ -33,21 +33,4 @@ export const formatUtils = {
         return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${unidades[i]}`
     },
 
-    /**
-     * Trunca un texto a una longitud máxima
-     */
-    truncarTexto(texto, longitud = 100) {
-        if (!texto) return ""
-        if (texto.length <= longitud) return texto
-
-        return texto.substring(0, longitud) + "..."
-    },
-
-    /**
-     * Capitaliza la primera letra de un texto
-     */
-    capitalizar(texto) {
-        if (!texto) return ""
-        return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase()
-    }
 }

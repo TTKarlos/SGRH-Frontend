@@ -1,16 +1,18 @@
 <template>
   <DefaultLayout>
     <div class="centros-page">
+      <!-- Header estandarizado -->
       <div class="page-header">
-        <h1 class="page-title">Gestión de Centros</h1>
-        <div class="page-actions">
-          <permission-check :permiso="{ nombre: 'Master', tipo: 'Escritura' }">
-            <button @click="showCreateModal" class="btn-primary">
-              <PlusCircle class="btn-icon-primary" size="18" />
-              Nuevo Centro
-            </button>
-          </permission-check>
+        <div class="header-title">
+          <h1>Gestión de Centros</h1>
+          <p class="text-muted">Administración de centros de trabajo y sus departamentos</p>
         </div>
+        <permission-check :permiso="{ nombre: 'Master', tipo: 'Escritura' }">
+          <button class="btn btn-primary" @click="showCreateModal">
+            <Plus size="16" class="btn-icon" />
+            Nuevo Centro
+          </button>
+        </permission-check>
       </div>
 
       <div class="card">
@@ -89,14 +91,19 @@
           <div class="modal-body">
             <form @submit.prevent="saveCentro" class="form">
               <div class="form-group">
-                <label for="nombre" class="form-label">Nombre</label>
+                <label for="nombre" class="form-label">Nombre *</label>
                 <input
                     id="nombre"
                     v-model="centroForm.nombre"
                     type="text"
                     class="form-input"
+                    :class="{ 'is-invalid': validationErrors.nombre }"
+                    @blur="validateField('nombre')"
                     required
                 />
+                <div v-if="validationErrors.nombre" class="invalid-feedback">
+                  {{ validationErrors.nombre }}
+                </div>
               </div>
               <div class="form-group">
                 <label for="direccion" class="form-label">Dirección</label>
@@ -105,7 +112,12 @@
                     v-model="centroForm.direccion"
                     type="text"
                     class="form-input"
+                    :class="{ 'is-invalid': validationErrors.direccion }"
+                    @blur="validateField('direccion')"
                 />
+                <div v-if="validationErrors.direccion" class="invalid-feedback">
+                  {{ validationErrors.direccion }}
+                </div>
               </div>
               <div class="form-group">
                 <label for="telefono" class="form-label">Teléfono</label>
@@ -114,7 +126,12 @@
                     v-model="centroForm.telefono"
                     type="text"
                     class="form-input"
+                    :class="{ 'is-invalid': validationErrors.telefono }"
+                    @blur="validateField('telefono')"
                 />
+                <div v-if="validationErrors.telefono" class="invalid-feedback">
+                  {{ validationErrors.telefono }}
+                </div>
               </div>
               <div class="form-group">
                 <label for="email" class="form-label">Email</label>
@@ -123,7 +140,12 @@
                     v-model="centroForm.email"
                     type="email"
                     class="form-input"
+                    :class="{ 'is-invalid': validationErrors.email }"
+                    @blur="validateField('email')"
                 />
+                <div v-if="validationErrors.email" class="invalid-feedback">
+                  {{ validationErrors.email }}
+                </div>
               </div>
               <div class="form-group">
                 <label for="id_zona" class="form-label">Zona</label>
@@ -131,18 +153,23 @@
                     id="id_zona"
                     v-model="centroForm.id_zona"
                     class="form-input"
+                    :class="{ 'is-invalid': validationErrors.id_zona }"
+                    @blur="validateField('id_zona')"
                 >
                   <option value="">Seleccione una zona</option>
                   <option v-for="zona in zonas" :key="zona.id_zona" :value="zona.id_zona">
                     {{ zona.nombre }}
                   </option>
                 </select>
+                <div v-if="validationErrors.id_zona" class="invalid-feedback">
+                  {{ validationErrors.id_zona }}
+                </div>
               </div>
             </form>
           </div>
           <div class="modal-footer">
             <button @click="closeModal" class="btn-secondary">Cancelar</button>
-            <button @click="saveCentro" class="btn-primary" :disabled="saving">
+            <button @click="saveCentro" class="btn-primary" :disabled="saving || !isFormValid">
               {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
@@ -159,12 +186,12 @@
             </button>
           </div>
           <div class="modal-body">
-            <p>¿Está seguro que desea eliminar el centro <strong>{{ centroToDelete?.nombre }}</strong>?</p>
+            <p>¿Está seguro que desea eliminar el centro <strong>{{ centroToDelete?.nombre || 'seleccionado' }}</strong>?</p>
             <p class="text-danger">Esta acción no se puede deshacer y eliminará todos los departamentos asociados.</p>
           </div>
           <div class="modal-footer">
             <button @click="closeDeleteModal" class="btn-secondary">Cancelar</button>
-            <button @click="deleteCentro" class="btn-danger" :disabled="deleting">
+            <button @click="handleDeleteCentro" class="btn-danger" :disabled="deleting">
               {{ deleting ? 'Eliminando...' : 'Eliminar' }}
             </button>
           </div>
@@ -179,10 +206,11 @@ import { mapState, mapActions } from 'pinia';
 import { useCentrosStore } from '../../stores/centros';
 import { useZonasStore } from '../../stores/zonas';
 import { useNotificationStore } from '../../stores/notification';
+import { validateCentro, validateField } from '../../validation/centroSchema';
 import DefaultLayout from '../../layouts/DefaultLayout.vue';
 import PermissionCheck from '../../components/common/PermissionCheck.vue';
 import LoadingSpinner from '../../components/common/LoadingSpinner.vue';
-import { PlusCircle, Edit, Trash2, Building2, X, FolderClosed, ChevronRight } from 'lucide-vue-next';
+import { Plus, Edit, Trash2, Building2, X, FolderClosed, ChevronRight } from 'lucide-vue-next';
 
 export default {
   name: 'CentrosGestion',
@@ -190,7 +218,7 @@ export default {
     DefaultLayout,
     PermissionCheck,
     LoadingSpinner,
-    PlusCircle,
+    Plus,
     Edit,
     Trash2,
     Building2,
@@ -209,6 +237,7 @@ export default {
       saving: false,
       deleting: false,
       centroToDelete: null,
+      validationErrors: {},
       centroForm: {
         nombre: '',
         direccion: '',
@@ -220,11 +249,28 @@ export default {
     };
   },
   computed: {
-    ...mapState(useCentrosStore, ['centros'])
+    ...mapState(useCentrosStore, ['centros']),
+
+    isFormValid() {
+      return this.centroForm.nombre &&
+          Object.keys(this.validationErrors).length === 0;
+    }
   },
   methods: {
     ...mapActions(useCentrosStore, ['fetchCentros', 'createCentro', 'updateCentro', 'deleteCentro']),
     ...mapActions(useZonasStore, ['fetchZonas']),
+
+    async validateField(field) {
+      const result = await validateField(field, this.centroForm[field], this.centroForm, this.isEditing);
+
+      if (result.isValid) {
+        delete this.validationErrors[field];
+      } else {
+        this.validationErrors[field] = result.error;
+      }
+
+      this.$forceUpdate();
+    },
 
     async loadCentros() {
       this.loading = true;
@@ -254,6 +300,7 @@ export default {
 
     showCreateModal() {
       this.isEditing = false;
+      this.validationErrors = {};
       this.centroForm = {
         nombre: '',
         direccion: '',
@@ -266,9 +313,10 @@ export default {
 
     editCentro(centro) {
       this.isEditing = true;
+      this.validationErrors = {};
       this.centroForm = {
         id_centro: centro.id_centro,
-        nombre: centro.nombre,
+        nombre: centro.nombre || '',
         direccion: centro.direccion || '',
         telefono: centro.telefono || '',
         email: centro.email || '',
@@ -279,16 +327,15 @@ export default {
 
     closeModal() {
       this.showModal = false;
+      this.validationErrors = {};
     },
 
     async saveCentro() {
       const notificationStore = useNotificationStore();
 
-      if (!this.centroForm.nombre) {
-        notificationStore.error(
-            'El nombre del centro es obligatorio',
-            'Error de validación'
-        );
+      const validation = await validateCentro(this.centroForm, this.isEditing);
+      if (!validation.isValid) {
+        this.validationErrors = validation.errors;
         return;
       }
 
@@ -311,10 +358,6 @@ export default {
         this.closeModal();
         await this.loadCentros();
       } catch (err) {
-        notificationStore.error(
-            err.message || 'Error al guardar el centro. Por favor, intente nuevamente.',
-            "Error al guardar"
-        );
       } finally {
         this.saving = false;
       }
@@ -330,26 +373,16 @@ export default {
       this.centroToDelete = null;
     },
 
-    async deleteCentro() {
-      const notificationStore = useNotificationStore();
-
+    async handleDeleteCentro() {
       if (!this.centroToDelete) return;
 
       this.deleting = true;
 
       try {
         await this.deleteCentro(this.centroToDelete.id_centro);
-        notificationStore.success(
-            `Centro "${this.centroToDelete.nombre}" eliminado correctamente`,
-            "Centro eliminado"
-        );
         this.closeDeleteModal();
         await this.loadCentros();
       } catch (err) {
-        notificationStore.error(
-            err.message || 'Error al eliminar el centro. Por favor, intente nuevamente.',
-            "Error al eliminar"
-        );
       } finally {
         this.deleting = false;
       }
@@ -371,28 +404,86 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .centros-page {
   padding: 1.5rem;
   font-family: 'Poppins', sans-serif;
 }
 
+/* Header estandarizado */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-}
-
-.page-actions {
+.header-title {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+}
+
+.header-title h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.header-title h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
+}
+
+.text-muted {
+  color: #6b7280;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: #dc2626;
+  color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
+}
+
+.btn-icon {
+  margin-right: 0.5rem;
 }
 
 .card {
@@ -460,28 +551,6 @@ export default {
   gap: 0.5rem;
 }
 
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #dc2626;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-  background-color: #b91c1c;
-}
-
-.btn-icon-primary {
-  margin-right: 0.25rem;
-}
-
 .btn-secondary {
   background-color: #f3f4f6;
   color: #4b5563;
@@ -508,8 +577,13 @@ export default {
   transition: background-color 0.2s;
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not(:disabled) {
   background-color: #dc2626;
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-icon-only {
@@ -531,7 +605,6 @@ export default {
   color: #111827;
 }
 
-/* Estilos específicos para btn-icon */
 .btn-icon {
   display: inline-flex;
   align-items: center;
@@ -564,12 +637,6 @@ export default {
   color: #dc2626;
 }
 
-.btn-icon-only.btn-danger:hover {
-  background-color: #fee2e2;
-  color: #dc2626;
-}
-
-/* Estilos para el botón de departamentos */
 .btn-departamentos {
   display: inline-flex;
   align-items: center;
@@ -610,16 +677,6 @@ export default {
   transform: translateX(2px);
 }
 
-.btn-link {
-  color: #dc2626;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.btn-link:hover {
-  text-decoration: underline;
-}
-
 .form {
   display: flex;
   flex-direction: column;
@@ -637,26 +694,33 @@ export default {
   color: #374151;
 }
 
-.form-input,
-.form-textarea {
+.form-input {
   padding: 0.5rem;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
   font-size: 0.875rem;
+  transition: all 0.2s ease;
 }
 
-.form-input:focus,
-.form-textarea:focus {
+.form-input:focus {
   outline: none;
   border-color: #dc2626;
   box-shadow: 0 0 0 1px #dc2626;
+}
+
+.form-input.is-invalid {
+  border-color: #dc2626;
+}
+
+.invalid-feedback {
+  color: #dc2626;
+  font-size: 0.875rem;
 }
 
 .text-danger {
   color: #dc2626;
 }
 
-/* Estilos para el modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -718,6 +782,15 @@ export default {
 @media (max-width: 767px) {
   .centros-page {
     padding: 1rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-header .btn {
+    width: 100%;
   }
 }
 </style>

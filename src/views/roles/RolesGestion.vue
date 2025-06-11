@@ -212,10 +212,6 @@ export default {
           { id_permiso: 9, nombre: 'Ausencias Lectura', tipo: 'Lectura' },
           { id_permiso: 10, nombre: 'Ausencias Escritura', tipo: 'Escritura' }
         ],
-        'Notificaciones': [
-          { id_permiso: 11, nombre: 'Notificaciones Lectura', tipo: 'Lectura' },
-          { id_permiso: 12, nombre: 'Notificaciones Escritura', tipo: 'Escritura' }
-        ],
         'Master': [
           { id_permiso: 13, nombre: 'Master Escritura', tipo: 'Escritura' },
         ]

@@ -5,11 +5,6 @@ export default {
         return api.get("/documentos", { params });
     },
 
-    getCount(params) {
-        return api.get("/documentos/count", { params })
-    },
-
-
     getById(id) {
         return api.get(`/documentos/${id}`);
     },

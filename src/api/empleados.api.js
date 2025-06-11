@@ -5,10 +5,6 @@ export default {
         return api.get("/empleados", { params })
     },
 
-    getCount(params) {
-        return api.get("/empleados/count", { params })
-    },
-
     getById(id) {
         return api.get(`/empleados/${id}`)
     },

@@ -4,9 +4,9 @@ export default {
     getAll(params) {
         return api.get("/empresas", { params })
     },
-
-    getCount(params) {
-        return api.get("/empresas/count", { params })
+    
+    getChartData(params) {
+        return api.get("/empresas/chart-data", { params })
     },
 
     getById(id) {
@@ -23,5 +23,5 @@ export default {
 
     delete(id) {
         return api.delete(`/empresas/${id}`)
-    }
+    },
 }

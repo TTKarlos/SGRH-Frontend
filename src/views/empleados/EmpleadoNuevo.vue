@@ -11,7 +11,7 @@
         </div>
 
         <div class="header-actions">
-          <button @click="saveEmpleado" class="btn btn-success">
+          <button @click="saveEmpleado" class="btn btn-success" :disabled="empleadosStore.loading">
             <Save size="18" class="btn-icon" />
             Guardar
           </button>
@@ -31,19 +31,21 @@
         <div class="tabs">
           <button
               class="tab-button"
-              :class="{ active: activeTab === 'personal' }"
+              :class="{ active: activeTab === 'personal', 'has-errors': hasPersonalErrors }"
               @click="activeTab = 'personal'"
           >
             <User size="18" class="tab-icon" />
             Datos Personales
+            <span v-if="hasPersonalErrors" class="error-indicator">!</span>
           </button>
           <button
               class="tab-button"
-              :class="{ active: activeTab === 'laboral' }"
+              :class="{ active: activeTab === 'laboral', 'has-errors': hasLaboralErrors }"
               @click="activeTab = 'laboral'"
           >
             <Briefcase size="18" class="tab-icon" />
             Información Laboral
+            <span v-if="hasLaboralErrors" class="error-indicator">!</span>
           </button>
         </div>
 
@@ -63,6 +65,9 @@
                         type="text"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.nombre }"
+                        @blur="validateField('nombre')"
+                        @input="clearFieldError('nombre')"
+                        placeholder="Ingrese el nombre"
                     />
                     <div v-if="validationErrors.nombre" class="invalid-feedback">
                       {{ validationErrors.nombre }}
@@ -76,6 +81,9 @@
                         type="text"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.apellidos }"
+                        @blur="validateField('apellidos')"
+                        @input="clearFieldError('apellidos')"
+                        placeholder="Ingrese los apellidos"
                     />
                     <div v-if="validationErrors.apellidos" class="invalid-feedback">
                       {{ validationErrors.apellidos }}
@@ -89,6 +97,10 @@
                         type="text"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.dni_nie }"
+                        @blur="validateField('dni_nie')"
+                        @input="clearFieldError('dni_nie')"
+                        placeholder="Ej: 12345678A o X1234567L"
+                        maxlength="9"
                     />
                     <div v-if="validationErrors.dni_nie" class="invalid-feedback">
                       {{ validationErrors.dni_nie }}
@@ -102,6 +114,9 @@
                         type="date"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.fecha_nacimiento }"
+                        @blur="validateField('fecha_nacimiento')"
+                        @change="clearFieldError('fecha_nacimiento')"
+                        :max="maxBirthDate"
                     />
                     <div v-if="validationErrors.fecha_nacimiento" class="invalid-feedback">
                       {{ validationErrors.fecha_nacimiento }}
@@ -114,6 +129,8 @@
                         v-model="empleado.estado_civil"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.estado_civil }"
+                        @blur="validateField('estado_civil')"
+                        @change="clearFieldError('estado_civil')"
                     >
                       <option value="">Seleccionar...</option>
                       <option value="Soltero/a">Soltero/a</option>
@@ -133,6 +150,10 @@
                         v-model="empleado.direccion"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.direccion }"
+                        @blur="validateField('direccion')"
+                        @input="clearFieldError('direccion')"
+                        placeholder="Ingrese la dirección completa"
+                        maxlength="500"
                     ></textarea>
                     <div v-if="validationErrors.direccion" class="invalid-feedback">
                       {{ validationErrors.direccion }}
@@ -146,6 +167,10 @@
                         type="tel"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.telefono }"
+                        @blur="validateField('telefono')"
+                        @input="clearFieldError('telefono')"
+                        placeholder="Ej: +34 123 456 789"
+                        maxlength="20"
                     />
                     <div v-if="validationErrors.telefono" class="invalid-feedback">
                       {{ validationErrors.telefono }}
@@ -159,6 +184,9 @@
                         type="email"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.email }"
+                        @blur="validateField('email')"
+                        @input="clearFieldError('email')"
+                        placeholder="ejemplo@correo.com"
                     />
                     <div v-if="validationErrors.email" class="invalid-feedback">
                       {{ validationErrors.email }}
@@ -184,6 +212,9 @@
                         type="text"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.puesto_actual }"
+                        @blur="validateField('puesto_actual')"
+                        @input="clearFieldError('puesto_actual')"
+                        placeholder="Ej: Desarrollador, Analista, etc."
                     />
                     <div v-if="validationErrors.puesto_actual" class="invalid-feedback">
                       {{ validationErrors.puesto_actual }}
@@ -197,6 +228,7 @@
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.id_centro }"
                         @change="handleCentroChange"
+                        @blur="validateField('id_centro')"
                     >
                       <option :value="null">Sin centro</option>
                       <option v-for="centro in centrosStore.centros"
@@ -216,6 +248,9 @@
                         v-model="empleado.id_departamento"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.id_departamento }"
+                        @blur="validateField('id_departamento')"
+                        @change="clearFieldError('id_departamento')"
+                        :disabled="!empleado.id_centro"
                     >
                       <option :value="null">Sin departamento</option>
                       <option v-for="departamento in departamentosFiltrados"
@@ -227,6 +262,9 @@
                     <div v-if="validationErrors.id_departamento" class="invalid-feedback">
                       {{ validationErrors.id_departamento }}
                     </div>
+                    <div v-if="!empleado.id_centro" class="form-text">
+                      Seleccione un centro primero para ver los departamentos disponibles
+                    </div>
                   </div>
 
                   <div class="form-group">
@@ -236,6 +274,9 @@
                         type="date"
                         class="form-control"
                         :class="{ 'is-invalid': validationErrors.fecha_incorporacion }"
+                        @blur="validateField('fecha_incorporacion')"
+                        @change="clearFieldError('fecha_incorporacion')"
+                        :max="maxIncorporationDate"
                     />
                     <div v-if="validationErrors.fecha_incorporacion" class="invalid-feedback">
                       {{ validationErrors.fecha_incorporacion }}
@@ -323,13 +364,33 @@ export default {
       activo: true
     })
 
-
     const departamentosFiltrados = computed(() => {
       if (!selectedCentroId.value) {
         return departamentosStore.departamentos
       }
 
       return departamentosStore.getDepartamentosPorCentro(selectedCentroId.value)
+    })
+
+    const maxBirthDate = computed(() => {
+      const today = new Date()
+      const maxDate = new Date(today.getFullYear() - 16, today.getMonth(), today.getDate())
+      return maxDate.toISOString().split('T')[0]
+    })
+
+    const maxIncorporationDate = computed(() => {
+      const today = new Date()
+      return today.toISOString().split('T')[0]
+    })
+
+    const hasPersonalErrors = computed(() => {
+      const personalFields = ['nombre', 'apellidos', 'dni_nie', 'fecha_nacimiento', 'estado_civil', 'direccion', 'telefono', 'email']
+      return personalFields.some(field => validationErrors.value[field])
+    })
+
+    const hasLaboralErrors = computed(() => {
+      const laboralFields = ['puesto_actual', 'id_departamento', 'id_centro', 'fecha_incorporacion']
+      return laboralFields.some(field => validationErrors.value[field])
     })
 
     return {
@@ -342,6 +403,10 @@ export default {
       empleado,
       selectedCentroId,
       departamentosFiltrados,
+      maxBirthDate,
+      maxIncorporationDate,
+      hasPersonalErrors,
+      hasLaboralErrors,
       router
     }
   },
@@ -358,6 +423,7 @@ export default {
 
     handleCentroChange() {
       this.selectedCentroId = this.empleado.id_centro
+      this.clearFieldError('id_centro')
 
       if (this.empleado.id_departamento) {
         const departamentoActual = this.departamentosStore.departamentos.find(
@@ -366,7 +432,119 @@ export default {
 
         if (departamentoActual && departamentoActual.id_centro !== this.selectedCentroId) {
           this.empleado.id_departamento = null
+          this.clearFieldError('id_departamento')
         }
+      }
+    },
+
+    async validateField(fieldName) {
+      try {
+        const { isValid, errors } = await validateEmpleado(this.empleado)
+
+        if (errors[fieldName]) {
+          this.validationErrors[fieldName] = errors[fieldName]
+        } else {
+          delete this.validationErrors[fieldName]
+        }
+
+        switch (fieldName) {
+          case 'dni_nie':
+            this.validateDniNie()
+            break
+          case 'email':
+            this.validateEmail()
+            break
+          case 'telefono':
+            this.validateTelefono()
+            break
+          case 'fecha_nacimiento':
+            this.validateFechaNacimiento()
+            break
+          case 'fecha_incorporacion':
+            this.validateFechaIncorporacion()
+            break
+        }
+      } catch (error) {
+        console.error('Error en validación de campo:', error)
+      }
+    },
+
+    validateDniNie() {
+      const dni = this.empleado.dni_nie?.trim()
+      if (!dni) return
+
+      const dniRegex = /^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/i
+      const nieRegex = /^[XYZ][0-9]{7}[TRWAGMYFPDXBNJZSQVHLCKE]$/i
+
+      if (!dniRegex.test(dni) && !nieRegex.test(dni)) {
+        this.validationErrors.dni_nie = 'Formato de DNI/NIE inválido'
+        return
+      }
+
+      if (dniRegex.test(dni)) {
+        const letters = 'TRWAGMYFPDXBNJZSQVHLCKE'
+        const number = parseInt(dni.substring(0, 8))
+        const letter = dni.charAt(8).toUpperCase()
+        const expectedLetter = letters.charAt(number % 23)
+
+        if (letter !== expectedLetter) {
+          this.validationErrors.dni_nie = 'La letra del DNI no es correcta'
+        }
+      }
+    },
+
+    validateEmail() {
+      const email = this.empleado.email?.trim()
+      if (!email) return
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        this.validationErrors.email = 'Formato de email inválido'
+      }
+    },
+
+    validateTelefono() {
+      const telefono = this.empleado.telefono?.trim()
+      if (!telefono) return
+
+      const telefonoRegex = /^[\+]?[0-9\s\-$$$$]{9,20}$/
+      if (!telefonoRegex.test(telefono)) {
+        this.validationErrors.telefono = 'Formato de teléfono inválido'
+      }
+    },
+
+    validateFechaNacimiento() {
+      const fecha = this.empleado.fecha_nacimiento
+      if (!fecha) return
+
+      const fechaNacimiento = new Date(fecha)
+      const hoy = new Date()
+      const edad = hoy.getFullYear() - fechaNacimiento.getFullYear()
+
+      if (fechaNacimiento > hoy) {
+        this.validationErrors.fecha_nacimiento = 'La fecha de nacimiento no puede ser futura'
+      } else if (edad < 16) {
+        this.validationErrors.fecha_nacimiento = 'El empleado debe tener al menos 16 años'
+      } else if (edad > 100) {
+        this.validationErrors.fecha_nacimiento = 'La fecha de nacimiento no es válida'
+      }
+    },
+
+    validateFechaIncorporacion() {
+      const fecha = this.empleado.fecha_incorporacion
+      if (!fecha) return
+
+      const fechaIncorporacion = new Date(fecha)
+      const hoy = new Date()
+
+      if (fechaIncorporacion > hoy) {
+        this.validationErrors.fecha_incorporacion = 'La fecha de incorporación no puede ser futura'
+      }
+    },
+
+    clearFieldError(fieldName) {
+      if (this.validationErrors[fieldName]) {
+        delete this.validationErrors[fieldName]
       }
     },
 
@@ -378,10 +556,18 @@ export default {
       try {
         const { isValid, errors } = await validateEmpleado(this.empleado)
 
-        if (!isValid) {
-          this.validationErrors = errors
+        await this.validateField('dni_nie')
+        await this.validateField('email')
+        await this.validateField('telefono')
+        await this.validateField('fecha_nacimiento')
+        await this.validateField('fecha_incorporacion')
 
-          const firstError = Object.values(errors)[0]
+        const allErrors = { ...errors, ...this.validationErrors }
+
+        if (!isValid || Object.keys(allErrors).length > 0) {
+          this.validationErrors = allErrors
+
+          const firstError = Object.values(allErrors)[0]
           this.notificationStore.error(
               firstError,
               "Error de validación"
@@ -390,7 +576,7 @@ export default {
           const personalFields = ['nombre', 'apellidos', 'dni_nie', 'fecha_nacimiento', 'estado_civil', 'direccion', 'telefono', 'email']
           const laboralFields = ['puesto_actual', 'id_departamento', 'id_centro', 'fecha_incorporacion']
 
-          const errorField = Object.keys(errors)[0]
+          const errorField = Object.keys(allErrors)[0]
 
           if (personalFields.includes(errorField)) {
             this.activeTab = 'personal'
@@ -415,6 +601,11 @@ export default {
         }
       } catch (error) {
         console.error("Error al crear empleado:", error)
+
+        if (error.response?.data?.errors) {
+          this.validationErrors = error.response.data.errors
+        }
+
         this.notificationStore.error(
             error.message || "Ha ocurrido un error al crear el empleado. Por favor, inténtelo de nuevo.",
             "Error al crear"
@@ -487,6 +678,11 @@ export default {
   border: none;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-icon {
   margin-right: 0.5rem;
 }
@@ -506,7 +702,7 @@ export default {
   box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
-.btn-success:hover {
+.btn-success:hover:not(:disabled) {
   background-color: #b91c1c;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
@@ -555,6 +751,7 @@ export default {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  position: relative;
 }
 
 .tab-button:hover {
@@ -565,6 +762,28 @@ export default {
 .tab-button.active {
   color: #dc2626;
   border-bottom-color: #dc2626;
+}
+
+.tab-button.has-errors {
+  color: #dc2626;
+}
+
+.tab-button.has-errors:not(.active) {
+  border-bottom-color: #fca5a5;
+}
+
+.error-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background-color: #dc2626;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
 }
 
 .tab-icon {
@@ -643,8 +862,15 @@ export default {
   box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
 }
 
+.form-control:disabled {
+  background-color: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
 .form-control.is-invalid {
   border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .invalid-feedback {
@@ -653,6 +879,13 @@ export default {
   margin-top: 0.25rem;
   font-size: 0.875rem;
   color: #dc2626;
+  font-weight: 500;
+}
+
+.form-text {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
 }
 
 textarea.form-control {

@@ -1,16 +1,18 @@
 <template>
   <DefaultLayout>
     <div class="zonas-page">
+      <!-- Header estandarizado -->
       <div class="page-header">
-        <h1 class="page-title">Gestión de Zonas</h1>
-        <div class="page-actions">
-          <permission-check :permiso="{ nombre: 'Master', tipo: 'Escritura' }">
-            <button @click="showCreateModal" class="btn-primary">
-              <PlusCircle class="btn-icon-primary" size="18" />
-              Nueva Zona
-            </button>
-          </permission-check>
+        <div class="header-title">
+          <h1>Gestión de Zonas</h1>
+          <p class="text-muted">Administración de zonas geográficas y sus centros asociados</p>
         </div>
+        <permission-check :permiso="{ nombre: 'Master', tipo: 'Escritura' }">
+          <button class="btn btn-primary" @click="showCreateModal">
+            <Plus size="16" class="btn-icon" />
+            Nueva Zona
+          </button>
+        </permission-check>
       </div>
 
       <div class="card">
@@ -144,7 +146,7 @@ import { useNotificationStore } from '../../stores/notification';
 import DefaultLayout from '../../layouts/DefaultLayout.vue';
 import PermissionCheck from '../../components/common/PermissionCheck.vue';
 import LoadingSpinner from '../../components/common/LoadingSpinner.vue';
-import { PlusCircle, Edit, Trash2, MapPin, X } from 'lucide-vue-next';
+import { Plus, Edit, Trash2, MapPin, X } from 'lucide-vue-next';
 
 export default {
   name: 'ZonasGestion',
@@ -152,7 +154,7 @@ export default {
     DefaultLayout,
     PermissionCheck,
     LoadingSpinner,
-    PlusCircle,
+    Plus,
     Edit,
     Trash2,
     MapPin,
@@ -302,28 +304,81 @@ export default {
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 .zonas-page {
   padding: 1.5rem;
   font-family: 'Poppins', sans-serif;
 }
 
+/* Header estandarizado */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.page-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #111827;
-  margin: 0;
-}
-
-.page-actions {
+.header-title {
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+}
+
+.header-title h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0;
+  color: #111827;
+  position: relative;
+  padding-bottom: 0.5rem;
+}
+
+.header-title h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(to right, #dc2626, #ef4444);
+  border-radius: 3px;
+}
+
+.text-muted {
+  color: #6b7280;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background-color: #dc2626;
+  color: white;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
+}
+
+.btn-primary:hover {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
+}
+
+.btn-icon {
+  margin-right: 0.5rem;
 }
 
 .card {
@@ -403,28 +458,6 @@ export default {
   gap: 0.5rem;
 }
 
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #dc2626;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-primary:hover {
-  background-color: #b91c1c;
-}
-
-.btn-icon-primary {
-  margin-right: 0.25rem;
-}
-
 .btn-secondary {
   background-color: #f3f4f6;
   color: #4b5563;
@@ -479,7 +512,6 @@ export default {
   color: #111827;
 }
 
-/* Estilos específicos para btn-icon */
 .btn-icon {
   display: inline-flex;
   align-items: center;
@@ -553,7 +585,6 @@ export default {
   color: #dc2626;
 }
 
-/* Estilos para el modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -615,6 +646,15 @@ export default {
 @media (max-width: 767px) {
   .zonas-page {
     padding: 1rem;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .page-header .btn {
+    width: 100%;
   }
 }
 </style>

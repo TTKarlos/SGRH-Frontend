@@ -15,6 +15,7 @@
               type="text"
               class="form-control"
               :class="{ 'is-invalid': validationErrors.nombre }"
+              @blur="validateField('nombre')"
           />
           <div v-if="validationErrors.nombre" class="invalid-feedback">
             {{ validationErrors.nombre }}
@@ -39,10 +40,13 @@
               type="date"
               class="form-control"
               :class="{ 'is-invalid': validationErrors.fecha_inicio }"
+              :max="today"
+              @blur="validateField('fecha_inicio')"
           />
           <div v-if="validationErrors.fecha_inicio" class="invalid-feedback">
             {{ validationErrors.fecha_inicio }}
           </div>
+          <small class="form-text text-muted">La fecha no puede ser futura</small>
         </div>
 
         <div class="form-group">
@@ -52,17 +56,21 @@
               type="date"
               class="form-control"
               :class="{ 'is-invalid': validationErrors.fecha_fin }"
+              :min="formacion.fecha_inicio"
+              :max="today"
+              @blur="validateField('fecha_fin')"
           />
           <div v-if="validationErrors.fecha_fin" class="invalid-feedback">
             {{ validationErrors.fecha_fin }}
           </div>
+          <small class="form-text text-muted">Debe ser posterior a la fecha de inicio y no puede ser futura</small>
         </div>
       </div>
       <div class="modal-footer">
         <button @click="$emit('close')" class="btn btn-secondary">
           Cancelar
         </button>
-        <button @click="$emit('save', formacion)" class="btn btn-primary" :disabled="loading">
+        <button @click="handleSave" class="btn btn-primary" :disabled="loading || !isFormValid">
           <Loader v-if="loading" size="18" class="btn-icon animate-spin" />
           <Save v-else size="18" class="btn-icon" />
           Guardar
@@ -74,16 +82,17 @@
 
 <script>
 import { X, Save, Loader } from 'lucide-vue-next'
+import { validateFormacion, validateField } from '../../../../validation/formacionSchema'
 
 export default {
   name: 'FormacionModal',
-  
+
   components: {
     X,
     Save,
     Loader
   },
-  
+
   props: {
     value: {
       type: Object,
@@ -94,30 +103,69 @@ export default {
         fecha_fin: ''
       })
     },
-    validationErrors: {
-      type: Object,
-      default: () => ({})
-    },
     loading: {
       type: Boolean,
       default: false
     }
   },
-  
+
   emits: ['close', 'save'],
-  
+
   data() {
     return {
-      formacion: { ...this.value }
+      formacion: { ...this.value },
+      validationErrors: {},
+      today: new Date().toISOString().split('T')[0]
     }
   },
-  
+
+  computed: {
+    isFormValid() {
+      return this.formacion.nombre &&
+          this.formacion.fecha_inicio &&
+          Object.keys(this.validationErrors).length === 0
+    }
+  },
+
   watch: {
     value: {
       handler(newValue) {
         this.formacion = { ...newValue }
+        this.validationErrors = {}
       },
       deep: true
+    },
+
+    'formacion.fecha_inicio'() {
+      if (this.formacion.fecha_fin && this.formacion.fecha_inicio > this.formacion.fecha_fin) {
+        this.formacion.fecha_fin = ''
+      }
+    }
+  },
+
+  methods: {
+    async validateField(field) {
+      const result = await validateField(field, this.formacion[field], this.formacion, !!this.formacion.id_formacion)
+
+      if (result.isValid) {
+        delete this.validationErrors[field]
+      } else {
+        this.validationErrors[field] = result.error
+      }
+
+      this.$forceUpdate()
+    },
+
+    async handleSave() {
+      const validation = await validateFormacion(this.formacion, !!this.formacion.id_formacion)
+
+      if (!validation.isValid) {
+        this.validationErrors = validation.errors
+        return
+      }
+
+      this.validationErrors = {}
+      this.$emit('save', this.formacion)
     }
   }
 }
@@ -214,8 +262,8 @@ export default {
 
 .form-control:focus {
   outline: none;
-  border-color: #fca5a5;
-  box-shadow: 0 0 0 3px rgba(252, 165, 165, 0.2);
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
 }
 
 .form-control.is-invalid {
@@ -225,6 +273,15 @@ export default {
 .invalid-feedback {
   color: #dc2626;
   font-size: 0.875rem;
+}
+
+.form-text {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.text-muted {
+  color: #6b7280;
 }
 
 .btn {
@@ -239,6 +296,11 @@ export default {
   border: none;
 }
 
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .btn-icon {
   margin-right: 0.5rem;
 }
@@ -249,7 +311,7 @@ export default {
   box-shadow: 0 1px 2px rgba(220, 38, 38, 0.1);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: #b91c1c;
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);

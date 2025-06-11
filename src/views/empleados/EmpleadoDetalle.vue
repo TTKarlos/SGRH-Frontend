@@ -81,6 +81,7 @@
                 <DocumentosEmpleado
                     v-if="empleado"
                     :idEmpleado="empleadoId"
+                    @ver-detalles="mostrarDetallesDocumento"
                     @previsualizar="previsualizarDocumento"
                 />
               </div>
@@ -120,18 +121,21 @@
               v-if="activeTab === 'contratos' && canViewContratos"
               :contratos="contratosStore.contratos"
               :loading="contratosStore.loading"
-              :error="contratosStore.error"
-              :canEdit="canEditContratos"
-              :id_empleado="empleadoId"
-              @add-contrato="showContratoModal = true"
-              @edit-contrato="editContrato"
-              @delete-contrato="deleteContrato"
-              @reload="loadContratos"
-              @save-contrato="saveContrato"
-              @previsualizar="previsualizarContrato"
+              :id-empleado="empleadoId"
+              @refresh="handleContratosRefresh"
           />
         </div>
       </div>
+
+      <!-- Modal de detalles de documento -->
+      <ModalDetallesDocumento
+          v-if="showDocumentModal && documentoSeleccionado"
+          :documento="documentoSeleccionado"
+          @cerrar="cerrarModalDocumento"
+          @descargar="descargarDocumento"
+          @previsualizar="previsualizarDocumento"
+          @editar="editarDocumento"
+      />
 
       <!-- Modal de confirmación de eliminación -->
       <div v-if="showDeleteModal" class="modal-overlay">
@@ -144,6 +148,7 @@
           </div>
           <div class="modal-body">
             <p>¿Está seguro de que desea eliminar a <strong>{{ empleado.nombre }} {{ empleado.apellidos }}</strong>?</p>
+            <p class="warning-text">⚠️ <strong>ATENCIÓN:</strong> Al eliminar este empleado también se eliminarán automáticamente todos sus documentos y contratos asociados.</p>
             <p>Esta acción no se puede deshacer.</p>
           </div>
           <div class="modal-footer">
@@ -253,23 +258,7 @@
           @validation-error="handleAusenciaValidationError"
       />
 
-      <!-- Modal de Contrato -->
-      <ContratoModal
-          v-if="showContratoModal"
-          :value="contratoForm"
-          :loading="savingContrato"
-          :validation-errors="contratoValidationErrors"
-          :tipos-contrato="tiposContratoStore.tiposContrato"
-          :empresas="empresasStore.empresas"
-          :convenios="conveniosStore.convenios"
-          :categorias="categoriasConvenioStore.getCategoriasByConvenioId(contratoForm.id_convenio)"
-          @close="closeContratoModal"
-          @save="saveContrato"
-          @validation-error="handleContratoValidationError"
-          @convenio-change="handleConvenioChange"
-      />
-
-      <!-- Modal de confirmación de eliminación de formación -->
+      <!-- Modales de confirmación de eliminación -->
       <div v-if="showDeleteFormacionModal" class="modal-overlay">
         <div class="modal-container">
           <div class="modal-header">
@@ -330,105 +319,11 @@
           </div>
         </div>
       </div>
-
-      <!-- Modal de confirmación de eliminación de contrato -->
-      <div v-if="showDeleteContratoModal" class="modal-overlay">
-        <div class="modal-container">
-          <div class="modal-header">
-            <h3>Confirmar eliminación</h3>
-            <button @click="showDeleteContratoModal = false" class="btn-close">
-              <X size="18" />
-            </button>
-          </div>
-          <div class="modal-body">
-            <p>¿Está seguro de que desea eliminar este contrato?</p>
-            <p>Esta acción no se puede deshacer.</p>
-          </div>
-          <div class="modal-footer">
-            <button @click="showDeleteContratoModal = false" class="btn btn-secondary">
-              Cancelar
-            </button>
-            <button @click="confirmDeleteContrato" class="btn btn-danger" :disabled="deletingContrato">
-              <Trash2 v-if="!deletingContrato" size="18" class="btn-icon" />
-              <Loader v-else size="18" class="btn-icon animate-spin" />
-              Eliminar
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal de previsualización de contrato -->
-      <div v-if="contratoPreview && canViewContratos" class="modal-overlay">
-        <div class="modal-container modal-lg">
-          <div class="modal-header">
-            <h3>Contrato</h3>
-            <div class="modal-header-actions">
-              <button @click="descargarContrato(contratoPreview)" class="btn-icon-only" title="Descargar">
-                <Download size="18" />
-              </button>
-              <button @click="cerrarPreviewContrato" class="btn-close">
-                <X size="18" />
-              </button>
-            </div>
-          </div>
-          <div class="modal-body preview-container">
-            <!-- Estado de carga -->
-            <div v-if="cargandoPreviewContrato" class="preview-loading">
-              <Loader size="32" class="animate-spin" />
-              <p>Cargando vista previa...</p>
-            </div>
-
-            <!-- Estado de error -->
-            <div v-else-if="errorPreviewContrato" class="preview-error">
-              <AlertTriangle size="32" />
-              <p>{{ errorPreviewContrato }}</p>
-            </div>
-
-            <!-- Vista previa del contrato -->
-            <template v-else-if="urlPreviewContrato">
-              <!-- Vista previa para PDF -->
-              <iframe
-                  v-if="esContratoTipoPDF"
-                  :src="urlPreviewContrato"
-                  class="documento-preview"
-                  frameborder="0"
-                  title="Vista previa del contrato"
-              ></iframe>
-
-              <!-- Vista previa para imágenes -->
-              <img
-                  v-else-if="esContratoTipoImagen"
-                  :src="urlPreviewContrato"
-                  class="imagen-preview"
-                  alt="Vista previa del contrato"
-              />
-
-              <!-- Mensaje para otros tipos de archivo -->
-              <div v-else class="preview-no-disponible">
-                <FileText size="48" class="empty-icon" />
-                <p>Este tipo de documento no se puede previsualizar.</p>
-                <p>Puede descargar el documento para verlo.</p>
-                <button @click="descargarContrato(contratoPreview)" class="btn btn-primary">
-                  <Download size="16" class="btn-icon" />
-                  Descargar archivo
-                </button>
-              </div>
-            </template>
-
-            <!-- Sin URL de vista previa -->
-            <div v-else class="preview-no-disponible">
-              <AlertTriangle size="32" />
-              <p>No se pudo generar la vista previa del contrato.</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </DefaultLayout>
 </template>
 
 <script>
-import { mapState } from 'pinia'
 import { useEmpleadosStore } from "../../stores/empleados"
 import { useDocumentosStore } from "../../stores/documentos"
 import { useAuthStore } from "../../stores/auth"
@@ -447,6 +342,7 @@ import { validateEmpleado } from "../../validation/empleadoSchema"
 import DefaultLayout from "../../layouts/DefaultLayout.vue"
 import LoadingSpinner from "../../components/common/LoadingSpinner.vue"
 import DocumentosEmpleado from "../../components/documentos/empleados/DocumentosEmpleado.vue"
+import ModalDetallesDocumento from "../../components/documentos/modals/ModalDetallesDocumento.vue"
 
 import EmpleadoHeader from "../../components/empleados/detalle/EmpleadoHeader.vue"
 import EmpleadoTabs from "../../components/empleados/detalle/EmpleadoTabs.vue"
@@ -457,7 +353,6 @@ import AusenciasTab from "../../components/empleados/detalle/tabs/AusenciasTab.v
 import ContratosTab from "../../components/empleados/detalle/tabs/ContratosTab.vue"
 import FormacionModal from "../../components/empleados/detalle/modals/FormacionModal.vue"
 import AusenciaModal from "../../components/empleados/detalle/modals/AusenciaModal.vue"
-import ContratoModal from "../../components/empleados/detalle/modals/ContratoModal.vue"
 
 import {
   AlertTriangle,
@@ -475,6 +370,7 @@ export default {
     DefaultLayout,
     LoadingSpinner,
     DocumentosEmpleado,
+    ModalDetallesDocumento,
     EmpleadoHeader,
     EmpleadoTabs,
     DatosPersonalesTab,
@@ -484,7 +380,6 @@ export default {
     ContratosTab,
     FormacionModal,
     AusenciaModal,
-    ContratoModal,
     AlertTriangle,
     Trash2,
     X,
@@ -524,6 +419,9 @@ export default {
       originalEmpleado: null,
       selectedCentroId: null,
 
+      showDocumentModal: false,
+      documentoSeleccionado: null,
+
       documentoPreview: null,
       urlPreview: null,
       cargandoPreview: false,
@@ -554,28 +452,7 @@ export default {
       showDeleteAusenciaModal: false,
       ausenciaToDelete: null,
       deletingAusencia: false,
-      tipoAusenciaEnCarga: {},
-
-      showContratoModal: false,
-      contratoForm: {
-        id_tipo_contrato: '',
-        id_empresa: '',
-        id_convenio: null,
-        id_categoria: null,
-        fecha_inicio: '',
-        fecha_fin: '',
-        fin_periodo_prueba: '',
-        id_empleado: null
-      },
-      contratoValidationErrors: {},
-      savingContrato: false,
-      showDeleteContratoModal: false,
-      contratoToDelete: null,
-      deletingContrato: false,
-      contratoPreview: null,
-      urlPreviewContrato: null,
-      cargandoPreviewContrato: false,
-      errorPreviewContrato: null
+      tipoAusenciaEnCarga: {}
     }
   },
 
@@ -641,25 +518,6 @@ export default {
 
       const nombreOriginal = this.documentoPreview.nombre_original?.toLowerCase() || ''
       return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
-    },
-
-    esContratoTipoPDF() {
-      if (!this.contratoPreview) return false
-
-      if (this.contratoPreview.mimetype === 'application/pdf') return true
-
-      const nombreOriginal = this.contratoPreview.nombre_original?.toLowerCase() || ''
-      return nombreOriginal.endsWith('.pdf')
-    },
-
-    esContratoTipoImagen() {
-      if (!this.contratoPreview) return false
-
-      const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg', 'image/webp']
-      if (this.contratoPreview.mimetype && imageTypes.includes(this.contratoPreview.mimetype)) return true
-
-      const nombreOriginal = this.contratoPreview.nombre_original?.toLowerCase() || ''
-      return /\.(jpg|jpeg|png|gif|bmp|webp)$/.test(nombreOriginal)
     }
   },
 
@@ -667,58 +525,88 @@ export default {
     empleadoId: {
       handler() {
         this.loadEmpleado()
-
-        if (this.canViewFormacion) {
-          this.loadFormaciones()
-        }
-
-        if (this.canViewAusencias) {
-          this.loadAusencias()
-        }
-
-        if (this.canViewContratos) {
-          this.loadContratos()
-        }
+        this.initializeTabData()
       },
       immediate: true
     },
 
     activeTab(newTab) {
-      if (newTab === 'formacion' && this.canViewFormacion) {
-        this.loadFormaciones()
-      } else if (newTab === 'ausencias' && this.canViewAusencias) {
-        this.loadAusencias()
-      } else if (newTab === 'contratos' && this.canViewContratos) {
-        this.loadContratos()
-      }
+      this.loadTabData(newTab)
     }
   },
 
-  created() {
-    this.departamentosStore.fetchDepartamentos()
-    this.centrosStore.fetchCentros()
-
-    if (this.canViewAusencias) {
-      this.loadTiposAusencia()
-    }
-
-    if (this.canViewContratos) {
-      this.loadTiposContrato()
-      this.loadEmpresas()
-      this.loadConvenios()
-    }
+  async created() {
+    await this.initializeStores()
   },
 
   methods: {
-    loadEmpleado() {
+    async initializeStores() {
+      try {
+        await Promise.all([
+          this.departamentosStore.fetchDepartamentos(),
+          this.centrosStore.fetchCentros()
+        ])
+
+        if (this.canViewAusencias) {
+          await this.loadTiposAusencia()
+        }
+
+        if (this.canViewContratos) {
+          await Promise.all([
+            this.loadTiposContrato(),
+            this.loadEmpresas(),
+            this.loadConvenios()
+          ])
+        }
+      } catch (error) {
+      }
+    },
+
+    initializeTabData() {
+      if (this.canViewFormacion) {
+        this.loadFormaciones()
+      }
+
+      if (this.canViewAusencias) {
+        this.loadAusencias()
+      }
+
+      if (this.canViewContratos) {
+        this.loadContratos()
+      }
+    },
+
+    loadTabData(tab) {
+      switch (tab) {
+        case 'formacion':
+          if (this.canViewFormacion) {
+            this.loadFormaciones()
+          }
+          break
+        case 'ausencias':
+          if (this.canViewAusencias) {
+            this.loadAusencias()
+          }
+          break
+        case 'contratos':
+          if (this.canViewContratos) {
+            this.loadContratos()
+          }
+          break
+      }
+    },
+
+    async loadEmpleado() {
       if (!this.empleadoId) return
 
-      this.empleadosStore.fetchEmpleadoById(this.empleadoId).then(() => {
+      try {
+        await this.empleadosStore.fetchEmpleadoById(this.empleadoId)
         if (this.empleadosStore.currentEmpleado) {
           this.originalEmpleado = JSON.parse(JSON.stringify(this.empleadosStore.currentEmpleado))
           this.selectedCentroId = this.empleadosStore.currentEmpleado.id_centro
         }
-      })
+      } catch (error) {
+      }
     },
 
     handleCentroChange(centroId) {
@@ -754,12 +642,8 @@ export default {
 
         if (!isValid) {
           this.validationErrors = errors
-
           const firstError = Object.values(errors)[0]
-          this.notificationStore.error(
-              firstError,
-              "Error de validación"
-          )
+          this.notificationStore.error(firstError, "Error de validación")
           return
         }
 
@@ -779,7 +663,6 @@ export default {
           )
         }
       } catch (error) {
-        console.error("Error al guardar empleado:", error)
         this.notificationStore.error(
             error.message || "Ha ocurrido un error al guardar los cambios. Por favor, inténtelo de nuevo.",
             "Error al actualizar"
@@ -787,56 +670,18 @@ export default {
       }
     },
 
-    async confirmDeleteEmpleado() {
-      try {
-        const success = await this.empleadosStore.deleteEmpleado(this.empleadoId)
-
-        if (success) {
-          this.showDeleteModal = false
-          this.notificationStore.success("El empleado ha sido eliminado correctamente.", "Empleado eliminado")
-          this.$router.push("/empleados")
-        } else {
-          this.notificationStore.error(
-              "Ha ocurrido un error al eliminar el empleado. Por favor, inténtelo de nuevo.",
-              "Error al eliminar"
-          )
-        }
-      } catch (error) {
-        console.error("Error al eliminar empleado:", error)
-        this.notificationStore.error(
-            error.message || "Ha ocurrido un error al eliminar el empleado. Por favor, inténtelo de nuevo.",
-            "Error al eliminar"
-        )
-      }
+    mostrarDetallesDocumento(documento) {
+      this.documentoSeleccionado = documento
+      this.showDocumentModal = true
     },
 
-    async toggleEmpleadoStatus() {
-      try {
-        const newStatus = !this.empleadosStore.currentEmpleado.activo
+    cerrarModalDocumento() {
+      this.showDocumentModal = false
+      this.documentoSeleccionado = null
+    },
 
-        const success = await this.empleadosStore.changeEmpleadoStatus(this.empleadoId, newStatus)
-
-        if (success) {
-          this.empleadosStore.currentEmpleado.activo = newStatus
-          this.originalEmpleado = JSON.parse(JSON.stringify(this.empleadosStore.currentEmpleado))
-
-          this.notificationStore.success(
-              `El empleado ha sido ${newStatus ? "activado" : "desactivado"} correctamente.`,
-              `Empleado ${newStatus ? "activado" : "desactivado"}`
-          )
-        } else {
-          this.notificationStore.error(
-              `Ha ocurrido un error al ${newStatus ? "activar" : "desactivar"} el empleado. Por favor, inténtelo de nuevo.`,
-              "Error al cambiar estado"
-          )
-        }
-      } catch (error) {
-        console.error("Error en toggleEmpleadoStatus:", error)
-        this.notificationStore.error(
-            error.message || "Ha ocurrido un error al cambiar el estado del empleado. Por favor, inténtelo de nuevo.",
-            "Error al cambiar estado"
-        )
-      }
+    editarDocumento(documento) {
+      this.cerrarModalDocumento()
     },
 
     async previsualizarDocumento(documento) {
@@ -861,8 +706,6 @@ export default {
 
         this.urlPreview = url
       } catch (error) {
-        console.error("Error al obtener vista previa:", error)
-
         let mensajeError = error.message || "No se pudo cargar la vista previa del documento"
 
         if (error.response) {
@@ -903,7 +746,6 @@ export default {
       try {
         await this.documentosStore.downloadDocumento(documento.id_documento)
       } catch (error) {
-        console.error("Error al descargar documento:", error)
         this.notificationStore.error(
             error.message || "Ha ocurrido un error al descargar el documento",
             "Error al descargar"
@@ -911,9 +753,61 @@ export default {
       }
     },
 
+    async confirmDeleteEmpleado() {
+      try {
+        const success = await this.empleadosStore.deleteEmpleado(this.empleadoId)
+
+        if (success) {
+          this.showDeleteModal = false
+          this.notificationStore.success("El empleado ha sido eliminado correctamente.", "Empleado eliminado")
+          this.$router.push("/empleados")
+        } else {
+          this.notificationStore.error(
+              "Ha ocurrido un error al eliminar el empleado. Por favor, inténtelo de nuevo.",
+              "Error al eliminar"
+          )
+        }
+      } catch (error) {
+        this.notificationStore.error(
+            error.message || "Ha ocurrido un error al eliminar el empleado. Por favor, inténtelo de nuevo.",
+            "Error al eliminar"
+        )
+      }
+    },
+
+    async toggleEmpleadoStatus() {
+      try {
+        const newStatus = !this.empleadosStore.currentEmpleado.activo
+        const success = await this.empleadosStore.changeEmpleadoStatus(this.empleadoId, newStatus)
+
+        if (success) {
+          this.empleadosStore.currentEmpleado.activo = newStatus
+          this.originalEmpleado = JSON.parse(JSON.stringify(this.empleadosStore.currentEmpleado))
+
+          this.notificationStore.success(
+              `El empleado ha sido ${newStatus ? "activado" : "desactivado"} correctamente.`,
+              `Empleado ${newStatus ? "activado" : "desactivado"}`
+          )
+        } else {
+          this.notificationStore.error(
+              `Ha ocurrido un error al ${newStatus ? "activar" : "desactivar"} el empleado. Por favor, inténtelo de nuevo.`,
+              "Error al cambiar estado"
+          )
+        }
+      } catch (error) {
+        this.notificationStore.error(
+            error.message || "Ha ocurrido un error al cambiar el estado del empleado. Por favor, inténtelo de nuevo.",
+            "Error al cambiar estado"
+        )
+      }
+    },
+
     async loadFormaciones() {
       if (!this.empleadoId || !this.canViewFormacion) return
-      await this.formacionesStore.fetchFormacionesByEmpleado(this.empleadoId)
+      try {
+        await this.formacionesStore.fetchFormacionesByEmpleado(this.empleadoId)
+      } catch (error) {
+      }
     },
 
     closeFormacionModal() {
@@ -969,8 +863,6 @@ export default {
           )
         }
       } catch (error) {
-        console.error("Error al guardar formación:", error)
-
         if (error.response?.data?.errors) {
           this.formacionValidationErrors = error.response.data.errors
         } else {
@@ -1010,7 +902,6 @@ export default {
           )
         }
       } catch (error) {
-        console.error("Error al eliminar formación:", error)
         this.notificationStore.error(
             error.message || "Ha ocurrido un error al eliminar la formación",
             "Error"
@@ -1022,12 +913,18 @@ export default {
 
     async loadAusencias() {
       if (!this.empleadoId || !this.canViewAusencias) return
-      await this.ausenciasStore.fetchAusenciasByEmpleado(this.empleadoId)
+      try {
+        await this.ausenciasStore.fetchAusenciasByEmpleado(this.empleadoId)
+      } catch (error) {
+      }
     },
 
     async loadTiposAusencia() {
       if (!this.canViewAusencias) return
-      await this.tiposAusenciaStore.fetchTiposAusencia()
+      try {
+        await this.tiposAusenciaStore.fetchTiposAusencia()
+      } catch (error) {
+      }
     },
 
     closeAusenciaModal() {
@@ -1083,8 +980,6 @@ export default {
           )
         }
       } catch (error) {
-        console.error("Error al guardar ausencia:", error)
-
         if (error.response?.data?.errors) {
           this.ausenciaValidationErrors = error.response.data.errors
         } else {
@@ -1099,8 +994,6 @@ export default {
     },
 
     handleAusenciaValidationError(error) {
-      console.error("Error de validación:", error)
-
       if (error.type === 'solapamiento') {
         this.ausenciaValidationErrors = {
           general: `Error: ${error.message}`
@@ -1142,7 +1035,6 @@ export default {
           )
         }
       } catch (error) {
-        console.error("Error al eliminar ausencia:", error)
         this.notificationStore.error(
             error.message || "Ha ocurrido un error al eliminar la ausencia",
             "Error"
@@ -1156,7 +1048,6 @@ export default {
       if (!idTipoAusencia) return "Sin especificar"
 
       const idNum = parseInt(idTipoAusencia)
-
       const tipo = this.tiposAusenciaStore.getTipoAusenciaById(idNum)
 
       if (tipo) {
@@ -1178,7 +1069,6 @@ export default {
       try {
         await this.tiposAusenciaStore.getTipoAusencia(id)
       } catch (error) {
-        console.error(`Error al cargar tipo de ausencia con ID ${id}:`, error)
       } finally {
         this.tipoAusenciaEnCarga[id] = false
       }
@@ -1186,241 +1076,40 @@ export default {
 
     async loadContratos() {
       if (!this.empleadoId || !this.canViewContratos) return
-      await this.contratosStore.fetchContratosByEmpleado(this.empleadoId)
+      try {
+        await this.contratosStore.fetchContratosByEmpleado(this.empleadoId)
+      } catch (error) {
+      }
     },
 
     async loadTiposContrato() {
       if (!this.canViewContratos) return
-      await this.tiposContratoStore.fetchTiposContrato()
+      try {
+        await this.tiposContratoStore.fetchTiposContrato()
+      } catch (error) {
+      }
     },
 
     async loadEmpresas() {
       if (!this.canViewContratos) return
-      await this.empresasStore.fetchEmpresas()
+      try {
+        await this.empresasStore.fetchEmpresas()
+      } catch (error) {
+      }
     },
 
     async loadConvenios() {
       if (!this.canViewContratos) return
-      await this.conveniosStore.fetchConvenios()
-    },
-
-    async loadCategoriasForConvenio(idConvenio) {
-      if (!idConvenio || !this.canViewContratos) return
-      await this.categoriasConvenioStore.fetchCategoriasByConvenio(idConvenio)
-    },
-
-    closeContratoModal() {
-      this.showContratoModal = false
-      this.contratoForm = {
-        id_tipo_contrato: '',
-        id_empresa: '',
-        id_convenio: null,
-        id_categoria: null,
-        fecha_inicio: '',
-        fecha_fin: '',
-        fin_periodo_prueba: '',
-        id_empleado: null
-      }
-      this.contratoValidationErrors = {}
-    },
-
-    editContrato(contrato) {
-      this.contratoForm = {
-        id_contrato: contrato.id_contrato,
-        id_tipo_contrato: contrato.id_tipo_contrato,
-        id_empresa: contrato.id_empresa,
-        id_convenio: contrato.id_convenio,
-        id_categoria: contrato.id_categoria,
-        fecha_inicio: contrato.fecha_inicio,
-        fecha_fin: contrato.fecha_fin,
-        fin_periodo_prueba: contrato.fin_periodo_prueba,
-        observaciones: contrato.observaciones,
-        id_empleado: this.empleadoId
-      }
-
-      if (contrato.id_convenio) {
-        this.loadCategoriasForConvenio(contrato.id_convenio)
-      }
-
-      this.showContratoModal = true
-    },
-
-    async saveContrato(contratoData) {
-      if (!this.canEditContratos) {
-        this.notificationStore.error('No tiene permisos para editar contratos', 'Error de permisos')
-        return
-      }
-
-      this.savingContrato = true
-      this.contratoValidationErrors = {}
-
       try {
-        if (contratoData instanceof FormData) {
-          contratoData.set('id_empleado', this.empleadoId)
-        } else {
-          contratoData.id_empleado = this.empleadoId
-        }
-
-        let result
-        if (this.contratoForm.id_contrato) {
-          result = await this.contratosStore.updateContrato(this.contratoForm.id_contrato, contratoData)
-        } else {
-          result = await this.contratosStore.createContrato(contratoData)
-        }
-
-        if (result) {
-          await this.loadContratos()
-          this.closeContratoModal()
-          this.notificationStore.success(
-              "El contrato ha sido guardado correctamente.",
-              "Contrato guardado"
-          )
-        }
+        await this.conveniosStore.fetchConvenios()
       } catch (error) {
-        console.error("Error al guardar contrato:", error)
-
-        if (error.response?.data?.errors) {
-          this.contratoValidationErrors = error.response.data.errors
-        } else {
-          this.notificationStore.error(
-              error.message || "Ha ocurrido un error al guardar el contrato",
-              "Error"
-          )
-        }
-      } finally {
-        this.savingContrato = false
       }
     },
 
-    handleContratoValidationError(error) {
-      console.error("Error de validación:", error)
-
-      if (error.type) {
-        this.contratoValidationErrors = {
-          [error.type]: error.message
-        }
-      } else {
-        this.contratoValidationErrors = {
-          general: error.message
-        }
-      }
-    },
-
-    handleConvenioChange(idConvenio) {
-      this.loadCategoriasForConvenio(idConvenio)
-    },
-
-    deleteContrato(contrato) {
-      this.contratoToDelete = contrato
-      this.showDeleteContratoModal = true
-    },
-
-    async confirmDeleteContrato() {
-      if (!this.canEditContratos) {
-        this.notificationStore.error('No tiene permisos para eliminar contratos', 'Error de permisos')
-        return
-      }
-
-      this.deletingContrato = true
-
+    async handleContratosRefresh(params = {}) {
       try {
-        const success = await this.contratosStore.deleteContrato(this.contratoToDelete.id_contrato)
-
-        if (success) {
-          await this.loadContratos()
-          this.showDeleteContratoModal = false
-          this.contratoToDelete = null
-          this.notificationStore.success(
-              "El contrato ha sido eliminado correctamente.",
-              "Contrato eliminado"
-          )
-        }
+        await this.contratosStore.fetchContratosByEmpleado(this.empleadoId, params)
       } catch (error) {
-        console.error("Error al eliminar contrato:", error)
-        this.notificationStore.error(
-            error.message || "Ha ocurrido un error al eliminar el contrato",
-            "Error"
-        )
-      } finally {
-        this.deletingContrato = false
-      }
-    },
-
-    async previsualizarContrato(contrato) {
-      if (!this.canViewContratos) {
-        this.notificationStore.error('No tiene permisos para ver contratos', 'Error de permisos')
-        return
-      }
-
-      if (!contrato || !contrato.ruta_archivo) {
-        this.notificationStore.warning('Este contrato no tiene un documento adjunto', 'Sin documento')
-        return
-      }
-
-      this.contratoPreview = contrato
-      this.cargandoPreviewContrato = true
-      this.errorPreviewContrato = null
-      this.urlPreviewContrato = null
-
-      try {
-        const url = await this.contratosStore.downloadContrato(contrato.id_contrato)
-
-        if (!url) {
-          throw new Error("No se pudo generar la URL de previsualización")
-        }
-
-        this.urlPreviewContrato = url
-      } catch (error) {
-        console.error("Error al obtener vista previa del contrato:", error)
-
-        let mensajeError = error.message || "No se pudo cargar la vista previa del contrato"
-
-        if (error.response) {
-          const status = error.response.status
-          if (status === 404) {
-            mensajeError = "El documento del contrato no existe o no está disponible"
-          } else if (status === 403) {
-            mensajeError = "No tiene permisos para ver este contrato"
-          } else {
-            mensajeError = `Error del servidor (${status}): ${error.response.statusText}`
-          }
-        }
-
-        this.errorPreviewContrato = mensajeError
-        this.notificationStore.warning(this.errorPreviewContrato, "Error de previsualización")
-      } finally {
-        this.cargandoPreviewContrato = false
-      }
-    },
-
-    cerrarPreviewContrato() {
-      if (this.urlPreviewContrato) {
-        URL.revokeObjectURL(this.urlPreviewContrato)
-      }
-      this.contratoPreview = null
-      this.urlPreviewContrato = null
-      this.errorPreviewContrato = null
-    },
-
-    async descargarContrato(contrato) {
-      if (!this.canViewContratos) {
-        this.notificationStore.error('No tiene permisos para descargar contratos', 'Error de permisos')
-        return
-      }
-
-      if (!contrato || !contrato.ruta_archivo) {
-        this.notificationStore.warning('Este contrato no tiene un documento adjunto', 'Sin documento')
-        return
-      }
-
-      try {
-        await this.contratosStore.downloadContrato(contrato.id_contrato)
-      } catch (error) {
-        console.error("Error al descargar contrato:", error)
-        this.notificationStore.error(
-            error.message || "Ha ocurrido un error al descargar el contrato",
-            "Error al descargar"
-        )
       }
     }
   }
@@ -1643,6 +1332,17 @@ export default {
   max-width: 100%;
   max-height: 70vh;
   object-fit: contain;
+}
+
+.warning-text {
+  color: #dc2626 !important;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 0.375rem;
+  padding: 0.75rem;
+  font-weight: 500;
+  border-left: 4px solid #dc2626;
+  margin-bottom: 1rem;
 }
 
 .btn-icon-only {
