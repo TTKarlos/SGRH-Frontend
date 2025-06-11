@@ -169,7 +169,7 @@
           </div>
           <div class="modal-footer">
             <button @click="closeModal" class="btn-secondary">Cancelar</button>
-            <button @click="saveCentro" class="btn-primary" :disabled="saving || !isFormValid">
+            <button @click="saveCentro" class="btn-danger" :disabled="saving || !isFormValid">
               {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
@@ -604,24 +604,6 @@ export default {
   color: #111827;
 }
 
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-  color: #6b7280;
-  border: none;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-icon:hover {
-  background-color: #f3f4f6;
-  color: #111827;
-}
 
 .btn-icon.btn-danger {
   color: #ef4444;

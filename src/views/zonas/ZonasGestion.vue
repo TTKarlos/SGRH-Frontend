@@ -100,7 +100,7 @@
           </div>
           <div class="modal-footer">
             <button @click="closeModal" class="btn-secondary">Cancelar</button>
-            <button @click="saveZona" class="btn-primary" :disabled="saving">
+            <button @click="saveZona" class="btn-danger" :disabled="saving">
               {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
@@ -180,7 +180,12 @@ export default {
     ...mapState(useZonasStore, ['zonas'])
   },
   methods: {
-    ...mapActions(useZonasStore, ['fetchZonas', 'createZona', 'updateZona', 'deleteZona']),
+    ...mapActions(useZonasStore, {
+      fetchZonas: 'fetchZonas',
+      createZona: 'createZona',
+      updateZona: 'updateZona',
+      deleteZonaStore: 'deleteZona'
+    }),
 
     async loadZonas() {
       this.loading = true;
@@ -267,19 +272,25 @@ export default {
     async deleteZona() {
       const notificationStore = useNotificationStore();
 
-      if (!this.zonaToDelete) return;
+      if (!this.zonaToDelete) {
+        console.error('No hay zona seleccionada para eliminar');
+        return;
+      }
 
       this.deleting = true;
 
       try {
-        await this.deleteZona(this.zonaToDelete.id_zona);
+        await this.deleteZonaStore(this.zonaToDelete.id_zona);
+
         notificationStore.success(
             `Zona "${this.zonaToDelete.nombre}" eliminada correctamente`,
             "Zona eliminada"
         );
+
         this.closeDeleteModal();
         await this.loadZonas();
       } catch (err) {
+        console.error('Error al eliminar zona:', err);
         notificationStore.error(
             err.message || 'Error al eliminar la zona. Por favor, intente nuevamente.',
             "Error al eliminar"
@@ -376,7 +387,6 @@ export default {
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(220, 38, 38, 0.1);
 }
-
 .btn-icon {
   margin-right: 0.5rem;
 }
@@ -512,24 +522,6 @@ export default {
   color: #111827;
 }
 
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: transparent;
-  color: #6b7280;
-  border: none;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.btn-icon:hover {
-  background-color: #f3f4f6;
-  color: #111827;
-}
 
 .btn-icon.btn-danger {
   color: #ef4444;
@@ -539,10 +531,6 @@ export default {
   padding: 0;
 }
 
-.btn-icon.btn-danger:hover {
-  background-color: #fee2e2;
-  color: #dc2626;
-}
 
 .btn-icon-only.btn-danger:hover {
   background-color: #fee2e2;
